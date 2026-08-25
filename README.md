@@ -21,6 +21,10 @@ TerpSchedule eliminates the tedious manual cross-referencing between Testudo, Pl
   - **Metrics & Ranking**: Optimization radar chart (`recharts`), top alternative schedule cards, and 1-click Testudo CRN copy.
 - **iCal / `.ics` Export**: RFC 5545 compliant recurring weekly calendar export ready for Apple Calendar, Google Calendar, and Outlook.
 - **Data Ingestion**: Integrates PlanetTerp API with resilient Testudo SOC HTML parser.
+- **Seat-aware Planning**: Separates schedules that can be registered now from concepts containing full or waitlist-required sections.
+- **Meeting Type Visibility**: Labels and filters lectures, discussions/recitations, labs, online meetings, and other formats.
+
+See [DATA_SOURCES.md](DATA_SOURCES.md) for live-vs-approximate data details and the free walking-time implementation path.
 
 ---
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { OptimizeResponse } from '../types/schedule';
-import { CheckCircle2, Zap, Clock, Star } from 'lucide-react';
+import { CheckCircle2, Zap, Clock, Star, CircleCheck, ListPlus } from 'lucide-react';
 
 interface ScheduleRankingProps {
   response: OptimizeResponse | null;
@@ -98,6 +98,10 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
                 <div className="bg-slate-950/60 px-1.5 py-0.5 rounded text-right truncate">
                   Gap: <span className="text-slate-200">{metrics.total_gap_minutes}m</span>
                 </div>
+              </div>
+              <div className={`mt-2 flex items-center gap-1 text-[10px] font-semibold ${metrics.registerable_now ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {metrics.registerable_now ? <CircleCheck className="w-3 h-3" /> : <ListPlus className="w-3 h-3" />}
+                {metrics.registerable_now ? 'All sections open — register now' : `${metrics.unavailable_sections} section${metrics.unavailable_sections === 1 ? '' : 's'} need waitlist or are closed`}
               </div>
             </button>
           );

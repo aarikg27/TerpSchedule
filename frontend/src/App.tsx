@@ -13,7 +13,7 @@ import { optimizeSchedules } from './api/client';
 import { AlertCircle, Calendar, Sliders, BarChart3 } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const [term, setTerm] = useState('202608');
+  const term = '202608';
   const [selectedCourses, setSelectedCourses] = useState<string[]>([
     'CMSC132',
     'MATH240',
@@ -25,6 +25,8 @@ export const App: React.FC = () => {
     blocked_days: [],
     max_gap_minutes: null,
     avoid_professors: [],
+    preferred_instructors: {},
+    availability: 'all',
     target_campus_days: 4,
   });
 
@@ -47,6 +49,7 @@ export const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isIngestModalOpen, setIsIngestModalOpen] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<'inputs' | 'grid' | 'ranking'>('grid');
+  const [visibleMeetingTypes, setVisibleMeetingTypes] = useState<string[]>(['Lecture', 'Discussion', 'Lab', 'Online', 'Other']);
 
   const handleAddCourse = (courseId: string) => {
     if (!selectedCourses.includes(courseId)) {
@@ -107,7 +110,6 @@ export const App: React.FC = () => {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Navbar
         term={term}
-        setTerm={setTerm}
         activeSchedule={activeSchedule}
         onOpenIngestModal={() => setIsIngestModalOpen(true)}
       />
@@ -169,6 +171,7 @@ export const App: React.FC = () => {
             <ConstraintPanel
               constraints={constraints}
               onChange={setConstraints}
+              selectedCourses={selectedCourses}
             />
 
             <WeightSliders
@@ -186,7 +189,7 @@ export const App: React.FC = () => {
               mobileTab !== 'grid' ? 'hidden lg:block' : ''
             }`}
           >
-            <CalendarGrid schedule={activeSchedule} />
+            <CalendarGrid schedule={activeSchedule} visibleMeetingTypes={visibleMeetingTypes} onVisibleMeetingTypesChange={setVisibleMeetingTypes} />
           </section>
 
           {/* RIGHT PANEL: Optimization Metrics, Radar, Rankings, Registration */}

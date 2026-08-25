@@ -17,6 +17,7 @@ class Section(Base):
     seats_total: Mapped[int] = mapped_column(default=0)
     open_seats: Mapped[int] = mapped_column(default=0)
     waitlist_count: Mapped[int] = mapped_column(default=0)
+    average_gpa: Mapped[float] = mapped_column(default=3.0)
     
     course: Mapped["Course"] = relationship(back_populates="sections")
     professor_rel: Mapped[Optional["Professor"]] = relationship(back_populates="sections")

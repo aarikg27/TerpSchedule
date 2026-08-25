@@ -11,6 +11,7 @@ class SolverMeeting:
     end_min: int
     building: str | None = None
     room: str | None = None
+    class_type: str | None = None
 
 
 @dataclass(slots=True)
@@ -20,6 +21,9 @@ class SolverSection:
     instructor: str | None = None
     avg_rating: float = 3.0
     avg_gpa: float = 3.0
+    seats_total: int = 0
+    open_seats: int = 0
+    waitlist_count: int = 0
     meetings: list[SolverMeeting] = field(default_factory=list)
     day_masks: dict[str, int] = field(default_factory=dict)
 
@@ -44,6 +48,8 @@ class ScheduleOptimizer:
         blocked_days: set[str] | None = None,
         max_gap_minutes: int | None = None,
         avoid_professors: set[str] | None = None,
+        preferred_instructors: dict[str, set[str]] | None = None,
+        availability: str = "all",
         building_distances: dict[tuple[str, str], int] | None = None,
         timeout_ms: int = 250,
         beam_threshold: int = 1_000_000,
@@ -55,6 +61,8 @@ class ScheduleOptimizer:
         self.blocked_days = blocked_days or set()
         self.max_gap_minutes = max_gap_minutes
         self.avoid_professors = avoid_professors or set()
+        self.preferred_instructors = preferred_instructors or {}
+        self.availability = availability
         self.building_distances = building_distances or {}
         self.timeout_ms = timeout_ms
         self.beam_threshold = beam_threshold
@@ -104,7 +112,15 @@ class ScheduleOptimizer:
         current_masks: dict[str, int],
         current_schedule: list[SolverSection],
     ) -> bool:
-        if section.instructor and section.instructor in self.avoid_professors:
+        instructor_key = (section.instructor or '').casefold()
+        if instructor_key and instructor_key in {name.casefold() for name in self.avoid_professors}:
+            return False
+
+        wanted = self.preferred_instructors.get(section.course_id, set())
+        if wanted and instructor_key not in {name.casefold() for name in wanted}:
+            return False
+
+        if self.availability == "open_only" and section.open_seats <= 0:
             return False
 
         # O(1) bitmask conflict check per day

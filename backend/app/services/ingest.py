@@ -276,6 +276,7 @@ def _generate_slug(name: str) -> str:
 async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int]:
     summary = {"courses": 0, "sections": 0, "professors": 0}
     professors_cache = set()
+    gpa_cache: Dict[tuple[str, str], float] = {}
 
     async with async_session_maker() as session:
         for dept in departments:
@@ -294,6 +295,7 @@ async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int
 
                 for section_data in course_data["sections"]:
                     instructor_name = section_data["instructor"]
+                    average_gpa = 3.0
 
                     if instructor_name and instructor_name not in professors_cache:
                         rating, reviews = await fetch_professor_rating(instructor_name)
@@ -309,6 +311,12 @@ async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int
                         professors_cache.add(instructor_name)
                         summary["professors"] += 1
 
+                    if instructor_name:
+                        gpa_key = (course_data["course_id"], instructor_name)
+                        if gpa_key not in gpa_cache:
+                            gpa_cache[gpa_key] = await fetch_course_gpa(*gpa_key)
+                        average_gpa = gpa_cache[gpa_key]
+
                     stmt = select(Section).where(
                         Section.course_id == course_data["course_id"],
                         Section.section_id == section_data["section_id"],
@@ -322,6 +330,7 @@ async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int
                         seats_total=section_data["seats_total"],
                         open_seats=section_data["open_seats"],
                         waitlist_count=section_data["waitlist_count"],
+                        average_gpa=average_gpa,
                     )
 
                     if existing_sec:

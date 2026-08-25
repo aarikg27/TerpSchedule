@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import type { RankedSchedule, Section, Meeting } from '../types/schedule';
-import { Star, MapPin, Clock, Footprints, Laptop, User } from 'lucide-react';
+import { Star, MapPin, Clock, Footprints, Laptop, User, FlaskConical, Users, Presentation } from 'lucide-react';
 
 interface CalendarGridProps {
   schedule: RankedSchedule | null;
+  visibleMeetingTypes: string[];
+  onVisibleMeetingTypesChange: (types: string[]) => void;
 }
 
 const DAYS = [
@@ -55,7 +57,18 @@ function getCourseColor(courseId: string) {
   return COURSE_COLORS[prefix] || COURSE_COLORS.DEFAULT;
 }
 
-export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule }) => {
+const normalizeMeetingType = (value?: string | null) => {
+  const type = (value || '').toLowerCase();
+  if (type.includes('discussion') || type.includes('recitation')) return 'Discussion';
+  if (type.includes('lab')) return 'Lab';
+  if (type.includes('lecture')) return 'Lecture';
+  if (type.includes('online')) return 'Online';
+  return 'Other';
+};
+
+const typeIcon = (type: string) => type === 'Lab' ? <FlaskConical className="w-2.5 h-2.5" /> : type === 'Discussion' ? <Users className="w-2.5 h-2.5" /> : <Presentation className="w-2.5 h-2.5" />;
+
+export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMeetingTypes, onVisibleMeetingTypesChange }) => {
   const [hoveredSection, setHoveredSection] = useState<{
     section: Section;
     meeting: Meeting;
@@ -88,7 +101,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule }) => {
     sec.meetings.forEach((m) => {
       if (m.day === 'ONLINE') {
         // online
-      } else if (inPersonMeetingsByDay[m.day]) {
+      } else if (inPersonMeetingsByDay[m.day] && visibleMeetingTypes.includes(normalizeMeetingType(m.class_type))) {
         inPersonMeetingsByDay[m.day].push({ section: sec, meeting: m });
         hasInPerson = true;
       }
@@ -110,6 +123,13 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule }) => {
 
   return (
     <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-800 bg-slate-900/80 p-2.5">
+        <span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Show on calendar</span>
+        {['Lecture', 'Discussion', 'Lab', 'Online', 'Other'].map((type) => {
+          const active = visibleMeetingTypes.includes(type);
+          return <button key={type} type="button" onClick={() => onVisibleMeetingTypesChange(active ? visibleMeetingTypes.filter((item) => item !== type) : [...visibleMeetingTypes, type])} className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${active ? 'border-red-500/60 bg-red-950/50 text-red-200' : 'border-slate-800 bg-slate-950 text-slate-500'}`}>{type}</button>;
+        })}
+      </div>
       {/* Online / Asynchronous Courses Bar */}
       {onlineSections.length > 0 && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center gap-2">
@@ -203,6 +223,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule }) => {
                           <span className="text-[10px] font-mono text-slate-400">
                             {section.section_id}
                           </span>
+                        </div>
+                        <div className="mt-0.5 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-slate-300/80">
+                          {typeIcon(normalizeMeetingType(meeting.class_type))}
+                          <span>{normalizeMeetingType(meeting.class_type)}</span>
+                          <span className={`ml-auto h-1.5 w-1.5 rounded-full ${section.open_seats > 0 ? 'bg-emerald-400' : 'bg-amber-400'}`} title={section.open_seats > 0 ? `${section.open_seats} seats open` : 'Waitlist or closed'} />
                         </div>
                         <div className="text-[10px] text-slate-300 font-medium truncate flex items-center gap-1">
                           <MapPin className="w-2.5 h-2.5 text-slate-400 shrink-0" />

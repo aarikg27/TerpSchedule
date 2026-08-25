@@ -149,6 +149,9 @@ def compute_total_score(
         'total_gap_minutes': total_gap,
         'active_days': len(active_days_set),
         'max_walk_time_mins': max_walk,
+        'open_sections': sum(1 for section in schedule if section.open_seats > 0),
+        'unavailable_sections': sum(1 for section in schedule if section.open_seats <= 0),
+        'registerable_now': all(section.open_seats > 0 for section in schedule),
     }
     
     return round(score, 1), metrics

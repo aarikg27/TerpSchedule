@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { SlidersHorizontal, Clock, CalendarOff, Hourglass, UserX, X } from 'lucide-react';
+import { SlidersHorizontal, Clock, CalendarOff, Hourglass, UserX, UserCheck, X, CircleDollarSign } from 'lucide-react';
 import type { Constraints } from '../types/schedule';
 
 interface ConstraintPanelProps {
   constraints: Constraints;
   onChange: (constraints: Constraints) => void;
+  selectedCourses: string[];
 }
 
 const TIME_OPTIONS = [
@@ -38,8 +39,11 @@ const WEEKDAYS = [
 export const ConstraintPanel: React.FC<ConstraintPanelProps> = ({
   constraints,
   onChange,
+  selectedCourses,
 }) => {
   const [profInput, setProfInput] = useState('');
+  const [wantedInput, setWantedInput] = useState('');
+  const [wantedCourse, setWantedCourse] = useState(selectedCourses[0] || '');
 
   const handleToggleDay = (day: string) => {
     const isBlocked = constraints.blocked_days.includes(day);
@@ -68,6 +72,23 @@ export const ConstraintPanel: React.FC<ConstraintPanelProps> = ({
       ...constraints,
       avoid_professors: constraints.avoid_professors.filter((p) => p !== name),
     });
+  };
+
+  const addWantedInstructor = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter' || !wantedInput.trim() || !wantedCourse) return;
+    e.preventDefault();
+    const current = constraints.preferred_instructors[wantedCourse] || [];
+    if (!current.includes(wantedInput.trim())) {
+      onChange({ ...constraints, preferred_instructors: { ...constraints.preferred_instructors, [wantedCourse]: [...current, wantedInput.trim()] } });
+    }
+    setWantedInput('');
+  };
+
+  const removeWantedInstructor = (course: string, name: string) => {
+    const next = { ...constraints.preferred_instructors };
+    next[course] = (next[course] || []).filter((item) => item !== name);
+    if (!next[course].length) delete next[course];
+    onChange({ ...constraints, preferred_instructors: next });
   };
 
   return (
@@ -128,6 +149,20 @@ export const ConstraintPanel: React.FC<ConstraintPanelProps> = ({
             ))}
           </select>
         </div>
+      </div>
+
+      <div>
+        <label className="text-[11px] font-medium text-slate-400 mb-1.5 flex items-center gap-1">
+          <CircleDollarSign className="w-3 h-3 text-emerald-400" /> Seat availability
+        </label>
+        <div className="grid grid-cols-3 gap-1">
+          {[
+            ['all', 'All ideas'], ['open_only', 'Register now'], ['waitlist_only', 'Needs waitlist'],
+          ].map(([value, label]) => (
+            <button key={value} type="button" onClick={() => onChange({ ...constraints, availability: value as Constraints['availability'] })} className={`rounded-md border px-1 py-1.5 text-[10px] font-semibold ${constraints.availability === value ? 'border-emerald-500 bg-emerald-950/60 text-emerald-200' : 'border-slate-800 bg-slate-900 text-slate-500'}`}>{label}</button>
+          ))}
+        </div>
+        <p className="mt-1 text-[10px] leading-relaxed text-slate-600">“Needs waitlist” includes closed sections; confirm availability in Testudo.</p>
       </div>
 
       {/* Excluded / Blocked Days */}
@@ -255,6 +290,26 @@ export const ConstraintPanel: React.FC<ConstraintPanelProps> = ({
             ))}
           </div>
         )}
+      </div>
+
+      <div>
+        <label className="text-[11px] font-medium text-slate-400 mb-1 flex items-center gap-1">
+          <UserCheck className="w-3 h-3 text-emerald-400" /> <span>Require an Instructor</span>
+        </label>
+        <div className="grid grid-cols-[90px_1fr] gap-1.5">
+          <select value={wantedCourse} onChange={(e) => setWantedCourse(e.target.value)} className="rounded-md border border-slate-700/80 bg-slate-900 px-2 py-1.5 text-xs text-slate-200">
+            {!selectedCourses.length && <option value="">Course</option>}
+            {selectedCourses.map((course) => <option key={course} value={course}>{course}</option>)}
+          </select>
+          <input type="text" value={wantedInput} onChange={(e) => setWantedInput(e.target.value)} onKeyDown={addWantedInstructor} disabled={!selectedCourses.length} placeholder="Exact name & Enter" className="rounded-md border border-slate-700/80 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50" />
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {Object.entries(constraints.preferred_instructors).flatMap(([course, names]) => names.map((name) => (
+            <span key={`${course}-${name}`} className="inline-flex items-center gap-1 rounded border border-emerald-800 bg-emerald-950/50 px-2 py-0.5 text-[10px] text-emerald-200">
+              <strong>{course}</strong> {name}<button type="button" onClick={() => removeWantedInstructor(course, name)}><X className="w-3 h-3" /></button>
+            </span>
+          )))}
+        </div>
       </div>
     </div>
   );

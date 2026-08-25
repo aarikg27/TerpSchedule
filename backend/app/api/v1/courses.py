@@ -62,7 +62,7 @@ async def get_course(
             
         instructor = sec.instructor
         avg_rating = sec.professor_rel.average_rating if sec.professor_rel else None
-        avg_gpa = getattr(sec.professor_rel, "average_gpa", 3.0) if sec.professor_rel else None
+        avg_gpa = sec.average_gpa
         
         sections_response.append(SectionResponse(
             section_id=sec.section_id,

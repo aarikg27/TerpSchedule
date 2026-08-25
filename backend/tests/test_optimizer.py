@@ -86,6 +86,30 @@ def test_empty_input():
     assert results == []
 
 
+def test_open_only_excludes_full_sections():
+    sections = {
+        "C1": [
+            SolverSection("FULL", "C1", "Prof A", open_seats=0, meetings=[SolverMeeting("M", 540, 590)]),
+            SolverSection("OPEN", "C1", "Prof B", open_seats=4, meetings=[SolverMeeting("M", 600, 650)]),
+        ]
+    }
+    results = ScheduleOptimizer(sections, availability="open_only").solve()
+    assert [[section.section_id for section in schedule] for schedule in results] == [["OPEN"]]
+
+
+def test_course_specific_preferred_instructor():
+    sections = {
+        "C1": [
+            SolverSection("A", "C1", "Wanted Prof", meetings=[SolverMeeting("M", 540, 590)]),
+            SolverSection("B", "C1", "Other Prof", meetings=[SolverMeeting("M", 600, 650)]),
+        ],
+        "C2": [SolverSection("C", "C2", "Different Department", meetings=[SolverMeeting("W", 540, 590)])],
+    }
+    results = ScheduleOptimizer(sections, preferred_instructors={"C1": {"wanted prof"}}).solve()
+    assert len(results) == 1
+    assert [section.section_id for section in results[0]] == ["A", "C"]
+
+
 def test_multiple_sections_per_course():
     sections = {
         "C1": [

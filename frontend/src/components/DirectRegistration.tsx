@@ -58,6 +58,9 @@ export const DirectRegistration: React.FC<DirectRegistrationProps> = ({
           >
             <span className="font-bold text-slate-200">{s.course_id}</span>
             <div className="flex items-center gap-2">
+              <span className={`rounded px-1.5 py-0.5 text-[9px] font-bold ${s.open_seats > 0 ? 'bg-emerald-950 text-emerald-400' : 'bg-amber-950 text-amber-400'}`}>
+                {s.open_seats > 0 ? `${s.open_seats} open` : 'waitlist/closed'}
+              </span>
               <span className="text-amber-400 font-bold">Sec {s.section_id}</span>
               <button
                 type="button"

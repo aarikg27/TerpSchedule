@@ -75,11 +75,12 @@ async def optimize_schedule(
                     start_min=m.start_time,
                     end_min=m.end_time,
                     building=m.building,
-                    room=m.room
+                    room=m.room,
+                    class_type=m.class_type,
                 ))
             
             avg_rating = sec.professor_rel.average_rating if sec.professor_rel else 3.0
-            avg_gpa = getattr(sec.professor_rel, 'average_gpa', 3.0) if sec.professor_rel else 3.0
+            avg_gpa = sec.average_gpa
             
             sections_list.append(SolverSection(
                 section_id=sec.section_id,
@@ -87,6 +88,9 @@ async def optimize_schedule(
                 instructor=sec.instructor,
                 avg_rating=avg_rating,
                 avg_gpa=avg_gpa,
+                seats_total=sec.seats_total,
+                open_seats=sec.open_seats,
+                waitlist_count=sec.waitlist_count,
                 meetings=meetings
             ))
         course_sections[course.course_id] = sections_list
@@ -99,6 +103,8 @@ async def optimize_schedule(
         blocked_days=set(request.constraints.blocked_days),
         max_gap_minutes=request.constraints.max_gap_minutes,
         avoid_professors=set(request.constraints.avoid_professors),
+        preferred_instructors={course: set(names) for course, names in request.constraints.preferred_instructors.items()},
+        availability=request.constraints.availability,
         building_distances=building_distances,
         timeout_ms=settings.OPTIMIZER_TIMEOUT_MS,
         beam_threshold=settings.BEAM_SEARCH_THRESHOLD
@@ -106,6 +112,11 @@ async def optimize_schedule(
     
     # 6. Call solver.solve()
     valid_schedules = optimizer.solve()
+    if request.constraints.availability == 'waitlist_only':
+        valid_schedules = [
+            schedule for schedule in valid_schedules
+            if any(section.open_seats <= 0 for section in schedule)
+        ]
     
     # 7 & 8. Score each valid schedule and take top 20
     scored_schedules = []
@@ -135,7 +146,8 @@ async def optimize_schedule(
                     start=minutes_to_time_str(m.start_min),
                     end=minutes_to_time_str(m.end_min),
                     building=m.building,
-                    room=m.room
+                    room=m.room,
+                    class_type=m.class_type,
                 ))
             sections_result.append(SectionResult(
                 course_id=sec.course_id,
@@ -143,6 +155,10 @@ async def optimize_schedule(
                 instructor=sec.instructor,
                 rating=sec.avg_rating,
                 gpa=sec.avg_gpa,
+                seats_total=sec.seats_total,
+                open_seats=sec.open_seats,
+                waitlist_count=sec.waitlist_count,
+                availability='open' if sec.open_seats > 0 else 'waitlist_or_closed',
                 meetings=meetings_result
             ))
             

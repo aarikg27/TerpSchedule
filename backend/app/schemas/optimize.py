@@ -7,7 +7,16 @@ class Constraints(BaseModel):
     blocked_days: list[str] = []
     max_gap_minutes: int | None = None
     avoid_professors: list[str] = []
+    preferred_instructors: dict[str, list[str]] = {}
+    availability: str = 'all'
     target_campus_days: int = 5
+
+    @field_validator('availability')
+    @classmethod
+    def valid_availability(cls, value: str) -> str:
+        if value not in {'all', 'open_only', 'waitlist_only'}:
+            raise ValueError('Availability must be all, open_only, or waitlist_only')
+        return value
 
 class Weights(BaseModel):
     professor_quality: float = 0.25
@@ -69,6 +78,9 @@ class ScheduleMetrics(BaseModel):
     total_gap_minutes: int
     active_days: int
     max_walk_time_mins: int
+    open_sections: int
+    unavailable_sections: int
+    registerable_now: bool
 
 class MeetingResult(BaseModel):
     day: str
@@ -76,6 +88,7 @@ class MeetingResult(BaseModel):
     end: str
     building: str | None = None
     room: str | None = None
+    class_type: str | None = None
 
 class SectionResult(BaseModel):
     course_id: str
@@ -83,6 +96,10 @@ class SectionResult(BaseModel):
     instructor: str | None = None
     rating: float | None = None
     gpa: float | None = None
+    seats_total: int
+    open_seats: int
+    waitlist_count: int
+    availability: str
     meetings: list[MeetingResult]
 
 class RankedSchedule(BaseModel):

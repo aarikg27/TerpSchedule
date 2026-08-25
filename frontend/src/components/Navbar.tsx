@@ -5,14 +5,12 @@ import { getIcalDownloadUrl } from '../api/client';
 
 interface NavbarProps {
   term: string;
-  setTerm: (term: string) => void;
   activeSchedule: RankedSchedule | null;
   onOpenIngestModal: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   term,
-  setTerm,
   activeSchedule,
   onOpenIngestModal,
 }) => {
@@ -48,19 +46,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Controls */}
         <div className="flex items-center gap-3">
-          {/* Term Selector */}
-          <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-300">
+          <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-300" title={`Testudo term ${term}`}>
             <Calendar className="w-3.5 h-3.5 text-amber-400" />
-            <select
-              value={term}
-              onChange={(e) => setTerm(e.target.value)}
-              aria-label="Academic Term"
-              className="bg-transparent text-slate-200 font-medium focus:outline-none cursor-pointer"
-            >
-              <option value="202608" className="bg-slate-900">Fall 2026</option>
-              <option value="202601" className="bg-slate-900">Spring 2026</option>
-              <option value="202508" className="bg-slate-900">Fall 2025</option>
-            </select>
+            <span className="font-semibold text-slate-100">Fall 2026</span>
+            <span className="rounded bg-emerald-950 px-1.5 py-0.5 text-[9px] font-bold uppercase text-emerald-400">Current</span>
           </div>
 
           {/* Ingest button */}
