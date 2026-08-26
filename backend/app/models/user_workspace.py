@@ -23,3 +23,12 @@ class UserPlannerState(Base):
     user_id: Mapped[str] = mapped_column(String(100), index=True, unique=True)
     state: Mapped[dict] = mapped_column(JSON)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+
+class UserAuditSummary(Base):
+    __tablename__ = "user_audit_summaries"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(100), index=True, unique=True)
+    summary: Mapped[dict] = mapped_column(JSON)
+    source_date: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
