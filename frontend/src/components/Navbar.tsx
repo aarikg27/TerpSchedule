@@ -14,6 +14,7 @@ interface NavbarProps {
   onThemeChange: (theme: 'light' | 'dark' | 'system') => void;
   terms: AvailableTerm[];
   onTermChange: (term: string) => void;
+  onHome: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,6 +24,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onThemeChange,
   terms,
   onTermChange,
+  onHome,
 }) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -44,7 +46,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/90 backdrop-blur-md px-4 lg:px-8 py-3">
       <div className="max-w-[1500px] mx-auto flex flex-wrap items-center justify-between gap-4">
         {/* Brand */}
-        <div className="flex items-center gap-3">
+        <button type="button" onClick={onHome} className="flex items-center gap-3 text-left" aria-label="Return to TerpSchedule home">
           <div className="h-10 w-10 rounded-[13px] bg-red-600 flex items-center justify-center shadow-sm">
             <span className="font-black text-white text-lg tracking-tighter">M</span>
           </div>
@@ -54,7 +56,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
             <p className="text-xs text-slate-400 m-0">Build a semester that fits your life.</p>
           </div>
-        </div>
+        </button>
 
         {/* Controls */}
         <div className="flex items-center gap-3">

@@ -129,3 +129,17 @@ body {
 .dark-mode .app-shell .text-amber-700 { color: #ffd27a !important; }
 .dark-mode .app-shell .text-purple-700 { color: #d6a8ff !important; }
 .dark-mode .app-shell .text-emerald-700 { color: #7ee2b8 !important; }
+
+.dark-mode .landing-page { background: #0b0b0d !important; color: #f5f5f7 !important; }
+.dark-mode .landing-page header,
+.dark-mode .landing-page section { border-color: rgba(255,255,255,.08) !important; }
+.dark-mode .landing-page section { background-color: rgba(20,20,22,.65) !important; }
+.dark-mode .landing-page .bg-white\/80,
+.dark-mode .landing-page .bg-white\/70 { background-color: rgba(28,28,30,.88) !important; border-color: rgba(255,255,255,.1) !important; }
+.dark-mode .landing-page .bg-slate-50,
+.dark-mode .landing-page .bg-slate-100 { background-color: #252527 !important; }
+.dark-mode .landing-page .text-slate-400,
+.dark-mode .landing-page .text-slate-500,
+.dark-mode .landing-page .text-slate-600,
+.dark-mode .landing-page .text-slate-700 { color: #a1a1a6 !important; }
+.dark-mode .landing-page .bg-black { background-color: #f5f5f7 !important; color: #1d1d1f !important; }

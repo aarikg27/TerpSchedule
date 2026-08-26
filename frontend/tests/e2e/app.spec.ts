@@ -15,6 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('generates, opens details, and preserves dark theme', async ({ page }) => {
+  await page.getByRole('button', { name: /start planning/i }).click();
   const inputsTab = page.getByRole('button', { name: 'Inputs' });
   if (await inputsTab.isVisible()) await inputsTab.click();
   await page.getByRole('button', { name: /generate schedules/i }).click();
@@ -33,8 +34,17 @@ test('has no serious or critical automated accessibility violations', async ({ p
 });
 
 test('opens the optional account flow', async ({ page }) => {
-  await page.getByRole('button', { name: 'Sign up' }).click();
+  await page.getByRole('button', { name: 'Create account' }).click();
   await expect(page.getByRole('dialog', { name: /create a terpschedule account/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible();
   await expect(page.getByLabel('Email')).toBeVisible();
+});
+
+test('shows the landing page first and opens the planner', async ({ page }) => {
+  await expect(page.getByRole('heading', { name: /your semester/i })).toBeVisible();
+  await page.getByRole('button', { name: /start planning/i }).click();
+  await expect(page).toHaveURL(/\/planner$/);
+  const inputsTab = page.getByRole('button', { name: 'Inputs' });
+  if (await inputsTab.isVisible()) await inputsTab.click();
+  await expect(page.getByText('Target Courses')).toBeVisible();
 });

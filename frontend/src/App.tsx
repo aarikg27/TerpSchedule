@@ -11,6 +11,7 @@ import { optimizeSchedules } from './api/client';
 import { getAvailableTerms, type AvailableTerm } from './api/client';
 import { AlertCircle, Calendar, Sliders, BarChart3 } from 'lucide-react';
 import { LegalDialog, type LegalPage } from './components/LegalDialog';
+import { LandingPage } from './components/LandingPage';
 
 export const App: React.FC = () => {
   const [term, setTerm] = useState('202608');
@@ -52,12 +53,23 @@ export const App: React.FC = () => {
   const [visibleMeetingTypes, setVisibleMeetingTypes] = useState<string[]>(['Lecture', 'Discussion', 'Lab', 'Online', 'Other']);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('terpschedule-theme') as 'light' | 'dark' | 'system') || 'system');
   const [legalPage, setLegalPage] = useState<LegalPage | null>(null);
+  const [page, setPage] = useState<'landing' | 'planner'>(() => window.location.pathname === '/planner' ? 'planner' : 'landing');
 
   useEffect(() => {
     const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark-mode', dark);
     localStorage.setItem('terpschedule-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    const onPopState = () => setPage(window.location.pathname === '/planner' ? 'planner' : 'landing');
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const openPlanner = () => { window.history.pushState({}, '', '/planner'); setPage('planner'); window.scrollTo(0, 0); };
+  const openLanding = () => { window.history.pushState({}, '', '/'); setPage('landing'); window.scrollTo(0, 0); };
+  const cycleLandingTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
     getAvailableTerms().then((result) => { setTerms(result.terms); setTerm(result.selected_term); }).catch(() => undefined);
@@ -120,6 +132,8 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedCourses, constraints, preferenceRanking, term]);
 
+  if (page === 'landing') return <LandingPage onStart={openPlanner} theme={theme} onToggleTheme={cycleLandingTheme} />;
+
   return (
     <div className="app-shell min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Navbar
@@ -129,6 +143,7 @@ export const App: React.FC = () => {
         onThemeChange={setTheme}
         terms={terms}
         onTermChange={handleTermChange}
+        onHome={openLanding}
       />
 
       {/* Mobile Tab Navigation */}
