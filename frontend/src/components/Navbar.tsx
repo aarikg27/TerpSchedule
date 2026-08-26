@@ -6,6 +6,7 @@ import { getSyncStatus, type SyncStatus } from '../api/client';
 import type { AvailableTerm } from '../api/client';
 import { authClient } from '../auth';
 import { AuthDialog } from './AuthDialog';
+import { BrandMark } from './BrandMark';
 
 interface NavbarProps {
   term: string;
@@ -47,9 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-[1500px] mx-auto flex flex-wrap items-center justify-between gap-4">
         {/* Brand */}
         <button type="button" onClick={onHome} className="flex items-center gap-3 text-left" aria-label="Return to TerpSchedule home">
-          <div className="h-10 w-10 rounded-[13px] bg-red-600 flex items-center justify-center shadow-sm">
-            <span className="font-black text-white text-lg tracking-tighter">M</span>
-          </div>
+          <BrandMark className="h-10 w-10 shrink-0 drop-shadow-sm" />
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl font-bold tracking-tight text-white m-0">TerpSchedule</h1>

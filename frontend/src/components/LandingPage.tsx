@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowRight, CalendarDays, Check, Moon, Route, ShieldCheck, Sparkles, Sun } from 'lucide-react';
 import { AuthDialog } from './AuthDialog';
 import { authClient } from '../auth';
+import { BrandMark } from './BrandMark';
 
 export const LandingPage: React.FC<{ onStart: () => void; theme: 'light' | 'dark' | 'system'; onToggleTheme: () => void }> = ({ onStart, theme, onToggleTheme }) => {
   const [authMode, setAuthMode] = useState<'sign-in' | 'sign-up' | null>(null);
@@ -9,7 +10,7 @@ export const LandingPage: React.FC<{ onStart: () => void; theme: 'light' | 'dark
   return <div className="landing-page min-h-screen overflow-hidden bg-[#f5f5f7] text-[#1d1d1f]">
     <header className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
       <button type="button" onClick={onStart} className="flex items-center gap-2.5" aria-label="Open TerpSchedule planner">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600 text-sm font-black text-white">M</span>
+        <BrandMark className="h-9 w-9 shrink-0" />
         <span className="text-lg font-semibold tracking-tight">TerpSchedule</span>
       </button>
       <div className="flex items-center gap-2">

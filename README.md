@@ -1,110 +1,38 @@
 # TerpSchedule
 
-TerpSchedule helps University of Maryland students compare every conflict-free version of a semester without manually matching dozens of Testudo sections.
+TerpSchedule is a schedule planner built for University of Maryland students. Add the courses you want, choose the constraints that matter to you, and compare ranked, conflict-free schedules without manually checking every section in Testudo.
 
-Choose courses, set the boundaries that matter to you, and rank preferences such as instructor quality, compactness, campus days, and walking ease. TerpSchedule returns a visual calendar plus ranked alternatives and clearly distinguishes schedules that are open now from schedules containing full sections.
+## Features
 
-## What students can do
+- Search UMD courses and generate conflict-free schedules for supported semesters.
+- Rank instructor quality, compactness, campus days, and walking ease in your preferred order.
+- Set earliest and latest class times, days off, maximum gaps, and instructor preferences.
+- Compare all schedules, schedules that can be registered for now, and schedules containing unavailable sections.
+- See lectures, discussions, recitations, labs, and online meetings clearly on a weekly calendar.
+- View section availability, instructor ratings, historical GPA, total credits, and schedule-wide GPA coverage.
+- Open class details for rooms, the next class, estimated walking time, distance, and Google Maps directions.
+- Save, name, rename, and revisit schedules across devices with an optional account.
+- Share schedules privately or export them as an `.ics` calendar.
+- Import a printer-friendly UMD degree audit for a structured summary of credits, completed coursework, GenEds, and remaining requirements.
+- Recheck saved schedules to see whether seats have opened.
+- Choose Light, Dark, or System appearance.
 
-- Search and combine Fall 2026 UMD courses.
-- Avoid instructors or require a particular instructor for a specific course.
-- Keep days free, choose earliest/latest class times, and limit gaps.
-- Drag schedule preferences into a clear first-through-fourth priority order.
-- Compare all results, open-only schedules, or schedules containing full/waitlist sections.
-- See lectures, discussions/recitations, labs, and online meetings separately.
-- Open any calendar block for instructor, seat, room, next-class, walking, and Google Maps details.
-- Use Light, Dark, or System appearance from the settings menu.
-- Compare instructor ratings, historical GPA, idle time, campus days, and estimated walks.
-- Copy section numbers or export a selected schedule as an `.ics` calendar.
-- Optionally sign in to sync selected courses, preferences, and saved schedules across devices.
-- Import a printer-friendly UMD degree audit for a deterministic, no-AI summary of remaining requirements.
-- Recheck exact saved sections to see whether previously full seats have opened.
-- Share a schedule with a private link that carries the schedule in the URL instead of publishing it to a public directory.
+## How schedule ranking works
 
-Seat counts are planning information, not a registration guarantee. Always confirm final availability and waitlist eligibility in Testudo.
+TerpSchedule first removes combinations that conflict with your required constraints. It then ranks the remaining schedules using your preference order, including instructor data, time between classes, number of campus days, and estimated walking effort.
 
-## Data freshness
+Results are separated by availability, so a strong conceptual schedule containing a full section does not hide a schedule that can be registered for immediately.
 
-Students do not need to press a sync button. The backend automatically:
+## Data and privacy
 
-- refreshes supported Testudo departments every six hours;
-- refreshes UMD Campus GIS building coordinates every 30 days;
-- keeps the previous cache when an upstream service is unavailable; and
-- repairs missing course data when a student requests it.
+Course, section, and seat information is refreshed automatically from public UMD sources. Instructor rating and historical GPA coverage varies by instructor and course; missing data is labeled instead of presented as a real value. Walking information is an estimate, and Google Maps should be used for route-level directions.
 
-The header shows whether cached data is ready and when it was last refreshed.
+Accounts are optional. Degree-audit PDFs are processed to create the displayed analysis and are not retained by TerpSchedule. Saved account data can be cleared from the app.
 
-## Run locally
+TerpSchedule is a planning tool. Testudo and the official UMD degree audit remain authoritative for registration, seats, waitlists, academic requirements, and degree progress.
 
-Requirements: Python 3.11+, Node.js 20+, and npm.
+## Project status
 
-### Backend
-
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate
-pip install -e ".[dev]"
-python -m uvicorn app.main:app --reload --port 8000
-```
-
-On macOS/Linux, activate with `source .venv/bin/activate`.
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open `http://localhost:5173`.
-
-Accounts are optional. To enable account sync locally, set `VITE_NEON_AUTH_URL` and `VITE_NEON_DATA_API_URL` in `frontend/.env.local`. The backend creates user workspace tables and applies owner-only PostgreSQL row-level-security policies in production.
-
-## Run with Docker
-
-```bash
-docker compose up --build
-```
-
-- App: `http://localhost:3000`
-- API documentation: `http://localhost:8000/docs`
-
-The Docker volume preserves the SQLite cache between restarts.
-
-## Configuration
-
-Backend settings can be supplied in `backend/.env` or as environment variables.
-
-| Setting | Default | Purpose |
-| --- | --- | --- |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./terpschedule.db` | Persistent database connection |
-| `DEFAULT_TERM` | `202608` | Supported Testudo term |
-| `DATA_REFRESH_HOURS` | `6` | Course and seat refresh interval |
-| `WALKING_REFRESH_DAYS` | `30` | Campus coordinate refresh interval |
-| `METRICS_REFRESH_DAYS` | `14` | PlanetTerp rating/GPA refresh interval |
-| `OPTIMIZER_TIMEOUT_MS` | `250` | Exact-search time budget |
-| `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origins |
-
-For a public deployment, use a persistent database/volume and set `CORS_ORIGINS` to the real frontend URL.
-
-## Tests
-
-```bash
-cd backend
-python -m pytest -q
-
-cd ../frontend
-npm run build
-```
-
-## Data sources and limitations
-
-See [DATA_SOURCES.md](DATA_SOURCES.md) for what is live, estimated, cached, or unavailable. See [PUBLISHING.md](PUBLISHING.md) before making a public deployment.
+TerpSchedule is preparing for a public beta with UMD students. Feedback and bug reports are welcome through this repository.
 
 TerpSchedule is an independent student project and is not affiliated with or endorsed by the University of Maryland.
-
-## License
-
-MIT
