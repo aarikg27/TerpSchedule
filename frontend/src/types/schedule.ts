@@ -59,6 +59,7 @@ export interface OptimizeResponse {
   total_combinations_checked: number;
   valid_schedules_count: number;
   execution_time_ms: number;
+  total_request_time_ms?: number;
   schedules: RankedSchedule[];
   registerable_schedules_count: number;
   waitlist_schedules_count: number;

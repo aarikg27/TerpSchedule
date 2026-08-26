@@ -59,7 +59,7 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
         </div>
         <div className="flex items-center gap-1">
           <Clock className="w-3 h-3 text-slate-500" />
-          <span>{response.execution_time_ms.toFixed(1)}ms</span>
+          <span title={`Algorithm: ${response.execution_time_ms.toFixed(1)}ms`}>Total: {response.total_request_time_ms == null ? `${response.execution_time_ms.toFixed(1)}ms` : response.total_request_time_ms >= 1000 ? `${(response.total_request_time_ms / 1000).toFixed(1)}s` : `${response.total_request_time_ms}ms`}</span>
         </div>
       </div>
       <details className="search-diagnostics rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">

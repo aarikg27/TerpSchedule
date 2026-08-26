@@ -9,7 +9,7 @@ import { DirectRegistration } from './components/DirectRegistration';
 import type { Constraints, Weights, PreferenceRank, OptimizeResponse, RankedSchedule } from './types/schedule';
 import { optimizeSchedules } from './api/client';
 import { getAvailableTerms, type AvailableTerm } from './api/client';
-import { AlertCircle, Calendar, Sliders, BarChart3 } from 'lucide-react';
+import { AlertCircle, Calendar, Sliders, BarChart3, Clock3, Server } from 'lucide-react';
 import { LegalDialog, type LegalPage } from './components/LegalDialog';
 import { LandingPage } from './components/LandingPage';
 import { ScheduleActions } from './components/ScheduleActions';
@@ -52,6 +52,9 @@ export const App: React.FC = () => {
   const [optimizeResponse, setOptimizeResponse] = useState<OptimizeResponse | null>(null);
   const [activeSchedule, setActiveSchedule] = useState<RankedSchedule | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [apiReady, setApiReady] = useState(false);
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationElapsed, setGenerationElapsed] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [mobileTab, setMobileTab] = useState<'inputs' | 'grid' | 'ranking'>('grid');
   const [visibleMeetingTypes, setVisibleMeetingTypes] = useState<string[]>(['Lecture', 'Discussion', 'Lab', 'Online', 'Other']);
@@ -107,8 +110,18 @@ export const App: React.FC = () => {
   const cycleLandingTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
-    getAvailableTerms().then((result) => { setTerms(result.terms); setTerm(result.selected_term); }).catch(() => undefined);
+    // This request starts while the landing page is visible, quietly waking a
+    // sleeping free backend before most students reach the planner.
+    getAvailableTerms().then((result) => { setTerms(result.terms); setTerm(result.selected_term); setApiReady(true); }).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!loading || generationStartedAt === null) return;
+    const update = () => setGenerationElapsed(Math.floor((Date.now() - generationStartedAt) / 1000));
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, [loading, generationStartedAt]);
 
   const handleTermChange = (nextTerm: string) => {
     setTerm(nextTerm);
@@ -129,7 +142,10 @@ export const App: React.FC = () => {
 
   const handleGenerate = async () => {
     if (selectedCourses.length === 0) return;
+    const requestStartedAt = Date.now();
     setLoading(true);
+    setGenerationStartedAt(requestStartedAt);
+    setGenerationElapsed(0);
     setError(null);
 
     try {
@@ -141,6 +157,8 @@ export const App: React.FC = () => {
         preference_ranking: preferenceRanking,
       });
 
+      data.total_request_time_ms = Date.now() - requestStartedAt;
+      setApiReady(true);
       setOptimizeResponse(data);
       setActiveSchedule(data.schedules[0] || null);
       if (data.valid_schedules_count === 0) {
@@ -152,6 +170,7 @@ export const App: React.FC = () => {
       setError(err.message || 'Failed to optimize schedules');
     } finally {
       setLoading(false);
+      setGenerationStartedAt(null);
     }
   };
 
@@ -218,6 +237,22 @@ export const App: React.FC = () => {
           <div className="mb-4 p-3 bg-red-950/70 border border-red-800 rounded-xl flex items-center gap-2.5 text-xs text-red-200 shadow-lg">
             <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {loading && (
+          <div role="status" aria-live="polite" className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-slate-700 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
+                {apiReady ? <Clock3 className="h-4 w-4"/> : <Server className="h-4 w-4"/>}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-2"><strong className="text-sm text-slate-900">{apiReady ? 'Building your schedules' : 'Connecting to the scheduling server'}</strong><span className="font-mono text-xs font-semibold text-blue-700">{generationElapsed}s elapsed</span></div>
+                <p className="mt-1 text-xs leading-5 text-slate-600">{apiReady ? 'Checking section combinations, applying your constraints, and ranking the best matches.' : 'The free server may be waking after inactivity. Your request is still active and this can take about a minute.'}</p>
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-blue-100"><div className="h-full w-1/3 animate-[pulse_1.2s_ease-in-out_infinite] rounded-full bg-blue-600"/></div>
+                {generationElapsed >= 60 && <p className="mt-2 text-[10px] font-medium text-amber-700">Still working—first requests can occasionally take longer than one minute. You do not need to press Generate again.</p>}
+              </div>
+            </div>
           </div>
         )}
 
