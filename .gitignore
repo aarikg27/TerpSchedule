@@ -47,6 +47,8 @@ frontend/dist/
 dist/
 .vite/
 frontend/.vite/
+frontend/test-results/
+frontend/playwright-report/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

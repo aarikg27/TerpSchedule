@@ -1,10 +1,13 @@
 import type { CourseSearchResult, OptimizeRequest, OptimizeResponse } from '../types/schedule';
 
-const API_BASE = '/api/v1';
+const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN || '').replace(/\/$/, '');
+const API_BASE = `${API_ORIGIN}/api/v1`;
 
-export async function searchCourses(query: string): Promise<CourseSearchResult[]> {
+export async function searchCourses(query: string, term?: string): Promise<CourseSearchResult[]> {
   if (!query.trim()) return [];
-  const res = await fetch(`${API_BASE}/courses?search=${encodeURIComponent(query)}`);
+  const params = new URLSearchParams({ search: query });
+  if (term) params.set('term', term);
+  const res = await fetch(`${API_BASE}/courses?${params}`);
   if (!res.ok) {
     throw new Error(`Failed to search courses: ${res.statusText}`);
   }
@@ -24,8 +27,17 @@ export async function optimizeSchedules(request: OptimizeRequest): Promise<Optim
   return res.json();
 }
 
-export function getIcalDownloadUrl(sectionStrings: string[]): string {
-  return `${API_BASE}/export/ical?sections=${encodeURIComponent(sectionStrings.join(','))}`;
+export function getIcalDownloadUrl(sectionStrings: string[], term?: string): string {
+  const params = new URLSearchParams({ sections: sectionStrings.join(',') });
+  if (term) params.set('term', term);
+  return `${API_BASE}/export/ical?${params}`;
+}
+
+export interface AvailableTerm { id: string; label: string; has_data: boolean }
+export async function getAvailableTerms(): Promise<{ selected_term: string; terms: AvailableTerm[] }> {
+  const res = await fetch(`${API_BASE}/terms`);
+  if (!res.ok) throw new Error('Could not load available semesters');
+  return res.json();
 }
 
 export async function triggerIngest(term: string, departments: string[]): Promise<{ courses: number; sections: number; professors: number }> {

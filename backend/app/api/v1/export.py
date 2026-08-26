@@ -14,6 +14,7 @@ router = APIRouter()
 @router.get("/ical")
 async def export_ical(
     sections: str,
+    term: str = "202608",
     db: AsyncSession = Depends(get_db)
 ):
     section_queries = [s.strip() for s in sections.split(",") if s.strip()]
@@ -32,7 +33,7 @@ async def export_ical(
         else:
             raise HTTPException(status_code=400, detail=f"Invalid section format: {q}")
             
-    stmt = select(Section).options(selectinload(Section.meetings))
+    stmt = select(Section).where(Section.term_id == term).options(selectinload(Section.meetings))
     conditions = []
     
     if pks:

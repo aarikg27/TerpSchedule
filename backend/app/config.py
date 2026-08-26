@@ -16,6 +16,14 @@ class Settings(BaseSettings):
     METRICS_REFRESH_DAYS: int = 14
     AUTO_SYNC_DEPARTMENTS: list[str] = ["CMSC", "MATH", "STAT", "ENGL", "PHYS", "BMGT", "COMM", "PSYC"]
     UMD_BUILDINGS_URL: str = "https://services9.arcgis.com/1rOwFRpAwrxe0rBl/arcgis/rest/services/CampusMapDefault_NoInsite/FeatureServer/0/query"
+    ADMIN_SYNC_TOKEN: str | None = None
+    CONTACT_EMAIL: str = "replace-me@example.com"
+    RATE_LIMIT_PER_MINUTE: int = 60
+    OPTIMIZE_RATE_LIMIT_PER_MINUTE: int = 15
+
+    @property
+    def outbound_user_agent(self) -> str:
+        return f"TerpSchedule/1.0 (+mailto:{self.CONTACT_EMAIL})"
 
     model_config = SettingsConfigDict(env_file=".env")
 

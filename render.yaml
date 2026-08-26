@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: terpschedule-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health/ready
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ADMIN_SYNC_TOKEN
+        generateValue: true
+      - key: CONTACT_EMAIL
+        sync: false

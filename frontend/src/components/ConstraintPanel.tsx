@@ -193,6 +193,7 @@ export const ConstraintPanel: React.FC<ConstraintPanelProps> = ({
         </div>
         <input
           type="range"
+          aria-label="Maximum gap between classes"
           min="30"
           max="360"
           step="30"
@@ -283,11 +284,11 @@ export const ConstraintPanel: React.FC<ConstraintPanelProps> = ({
           <UserCheck className="w-3 h-3 text-emerald-400" /> <span>Require an Instructor</span>
         </label>
         <div className="grid grid-cols-[90px_1fr] gap-1.5">
-          <select value={wantedCourse} onChange={(e) => setWantedCourse(e.target.value)} className="rounded-md border border-slate-700/80 bg-slate-900 px-2 py-1.5 text-xs text-slate-200">
+          <select aria-label="Course for required instructor" value={wantedCourse} onChange={(e) => setWantedCourse(e.target.value)} className="rounded-md border border-slate-700/80 bg-slate-900 px-2 py-1.5 text-xs text-slate-200">
             {!selectedCourses.length && <option value="">Course</option>}
             {selectedCourses.map((course) => <option key={course} value={course}>{course}</option>)}
           </select>
-          <input type="text" value={wantedInput} onChange={(e) => setWantedInput(e.target.value)} onKeyDown={addWantedInstructor} disabled={!selectedCourses.length} placeholder="Exact name & Enter" className="rounded-md border border-slate-700/80 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50" />
+          <input aria-label="Required instructor name" type="text" value={wantedInput} onChange={(e) => setWantedInput(e.target.value)} onKeyDown={addWantedInstructor} disabled={!selectedCourses.length} placeholder="Exact name & Enter" className="rounded-md border border-slate-700/80 bg-slate-900 px-2.5 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-emerald-500 focus:outline-none disabled:opacity-50" />
         </div>
         <div className="mt-2 flex flex-wrap gap-1">
           {Object.entries(constraints.preferred_instructors).flatMap(([course, names]) => names.map((name) => (

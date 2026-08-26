@@ -39,7 +39,7 @@ async def refresh_walking_cache() -> dict[str, int]:
         "outSR": "4326",
         "f": "json",
     }
-    headers = {"User-Agent": "TerpSchedule/1.0 (UMD student schedule planner)"}
+    headers = {"User-Agent": settings.outbound_user_agent}
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.get(settings.UMD_BUILDINGS_URL, params=params, headers=headers)
         response.raise_for_status()

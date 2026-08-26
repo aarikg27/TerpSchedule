@@ -87,10 +87,16 @@ class MeetingResult(BaseModel):
     start: str
     end: str
     building: str | None = None
+    building_name: str | None = None
+    building_latitude: float | None = None
+    building_longitude: float | None = None
     room: str | None = None
     class_type: str | None = None
     next_course_id: str | None = None
     next_building: str | None = None
+    next_building_name: str | None = None
+    next_building_latitude: float | None = None
+    next_building_longitude: float | None = None
     next_room: str | None = None
     next_start: str | None = None
     walk_to_next_minutes: int | None = None

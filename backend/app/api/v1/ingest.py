@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
@@ -6,6 +6,7 @@ from app.services.ingest import run_full_ingest
 from app.database import get_db
 from app.models import SyncState
 from app.config import settings
+from app.services.terms import current_term_id
 
 router = APIRouter()
 
@@ -14,7 +15,9 @@ class IngestRequest(BaseModel):
     departments: list[str]
 
 @router.post("/ingest")
-async def ingest_data(request: IngestRequest):
+async def ingest_data(request: IngestRequest, x_admin_token: str | None = Header(default=None)):
+    if not settings.ADMIN_SYNC_TOKEN or x_admin_token != settings.ADMIN_SYNC_TOKEN:
+        raise HTTPException(status_code=404, detail="Not found")
     try:
         result = await run_full_ingest(term_id=request.term, departments=request.departments)
     except Exception as exc:
@@ -31,11 +34,12 @@ async def ingest_data(request: IngestRequest):
 async def sync_status(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(SyncState))
     states = result.scalars().all()
-    course_states = [state for state in states if state.key.startswith(f"soc:{settings.DEFAULT_TERM}:")]
+    active_term = current_term_id()
+    course_states = [state for state in states if state.key.startswith(f"soc:{active_term}:")]
     walking = next((state for state in states if state.key == "walking:umd-campus-gis"), None)
     latest_course_sync = max((state.last_success_at for state in course_states), default=None)
     return {
-        "term": settings.DEFAULT_TERM,
+        "term": active_term,
         "automatic": True,
         "last_course_sync": latest_course_sync,
         "departments_ready": len(course_states),

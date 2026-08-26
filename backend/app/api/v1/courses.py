@@ -10,6 +10,7 @@ from app.models.meeting_time import MeetingTime
 from app.models.professor import Professor
 from app.schemas.course import CourseResponse, CourseSearchResult, SectionResponse, MeetingResponse, minutes_to_time_str
 from app.services.ingest import ensure_courses_ingested
+from app.config import settings
 import re
 
 router = APIRouter()
@@ -20,7 +21,8 @@ async def search_courses(
     term: str | None = None,
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(Course)
+    selected_term = term or settings.DEFAULT_TERM
+    stmt = select(Course).where(Course.term_id == selected_term)
     if search:
         search_term = f"%{search}%"
         stmt = stmt.where(Course.course_id.ilike(search_term) | Course.name.ilike(search_term))
@@ -31,7 +33,7 @@ async def search_courses(
     # never been cached on this deployment.
     normalized = (search or '').upper().replace(' ', '')
     if not courses and re.fullmatch(r"[A-Z]{4}\d{3}[A-Z]?", normalized):
-        await ensure_courses_ingested(term or "202608", [normalized])
+        await ensure_courses_ingested(selected_term, [normalized])
         db.expire_all()
         result = await db.execute(stmt)
         courses = result.scalars().all()
@@ -45,7 +47,7 @@ async def get_course(
 ):
     stmt = (
         select(Course)
-        .where(Course.course_id == course_id)
+        .where(Course.term_id == (term or settings.DEFAULT_TERM), Course.course_id == course_id)
         .options(
             selectinload(Course.sections).selectinload(Section.meetings),
             selectinload(Course.sections).selectinload(Section.professor_rel)

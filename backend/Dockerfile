@@ -7,14 +7,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN pip install --no-cache-dir uv
 
-COPY pyproject.toml .
-RUN uv pip install --system --no-cache-dir \
-    fastapi "uvicorn[standard]" "sqlalchemy[asyncio]" aiosqlite \
-    httpx beautifulsoup4 icalendar pydantic-settings cachetools pytz
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
 
 COPY app/ ./app/
-COPY seed_buildings.py .
-
 EXPOSE 8000
 
-CMD ["sh", "-c", "python seed_buildings.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", ".venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

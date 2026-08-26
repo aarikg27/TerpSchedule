@@ -8,10 +8,13 @@ import { ScheduleRanking } from './components/ScheduleRanking';
 import { DirectRegistration } from './components/DirectRegistration';
 import type { Constraints, Weights, PreferenceRank, OptimizeResponse, RankedSchedule } from './types/schedule';
 import { optimizeSchedules } from './api/client';
+import { getAvailableTerms, type AvailableTerm } from './api/client';
 import { AlertCircle, Calendar, Sliders, BarChart3 } from 'lucide-react';
+import { LegalDialog, type LegalPage } from './components/LegalDialog';
 
 export const App: React.FC = () => {
-  const term = '202608';
+  const [term, setTerm] = useState('202608');
+  const [terms, setTerms] = useState<AvailableTerm[]>([{ id: '202608', label: 'Fall 2026', has_data: true }]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([
     'CMSC132',
     'MATH240',
@@ -48,12 +51,24 @@ export const App: React.FC = () => {
   const [mobileTab, setMobileTab] = useState<'inputs' | 'grid' | 'ranking'>('grid');
   const [visibleMeetingTypes, setVisibleMeetingTypes] = useState<string[]>(['Lecture', 'Discussion', 'Lab', 'Online', 'Other']);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('terpschedule-theme') as 'light' | 'dark' | 'system') || 'system');
+  const [legalPage, setLegalPage] = useState<LegalPage | null>(null);
 
   useEffect(() => {
     const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     document.documentElement.classList.toggle('dark-mode', dark);
     localStorage.setItem('terpschedule-theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    getAvailableTerms().then((result) => { setTerms(result.terms); setTerm(result.selected_term); }).catch(() => undefined);
+  }, []);
+
+  const handleTermChange = (nextTerm: string) => {
+    setTerm(nextTerm);
+    setOptimizeResponse(null);
+    setActiveSchedule(null);
+    setError(null);
+  };
 
   const handleAddCourse = (courseId: string) => {
     if (!selectedCourses.includes(courseId)) {
@@ -112,6 +127,8 @@ export const App: React.FC = () => {
         activeSchedule={activeSchedule}
         theme={theme}
         onThemeChange={setTheme}
+        terms={terms}
+        onTermChange={handleTermChange}
       />
 
       {/* Mobile Tab Navigation */}
@@ -163,6 +180,7 @@ export const App: React.FC = () => {
             }`}
           >
             <CourseSearch
+              term={term}
               selectedCourses={selectedCourses}
               onAddCourse={handleAddCourse}
               onRemoveCourse={handleRemoveCourse}
@@ -221,6 +239,12 @@ export const App: React.FC = () => {
           </aside>
         </div>
       </main>
+
+      <footer className="mx-auto flex w-full max-w-[1500px] flex-wrap items-center justify-between gap-3 px-5 pb-6 text-[11px] text-slate-500">
+        <span>Unofficial UMD planning tool · Always verify in Testudo.</span>
+        <span className="flex gap-4"><button type="button" onClick={() => setLegalPage('privacy')} className="hover:text-slate-800">Privacy</button><button type="button" onClick={() => setLegalPage('terms')} className="hover:text-slate-800">Terms & disclaimer</button></span>
+      </footer>
+      {legalPage && <LegalDialog page={legalPage} onClose={() => setLegalPage(null)} />}
 
     </div>
   );

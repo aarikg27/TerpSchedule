@@ -58,7 +58,7 @@ def parse_days(day_string: str) -> List[str]:
 
 
 async def scrape_testudo_department(term_id: str, department: str) -> List[Dict[str, Any]]:
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) TerpSchedule/1.0"}
+    headers = {"User-Agent": settings.outbound_user_agent}
     courses_map: Dict[str, Dict[str, Any]] = {}
 
     async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
@@ -314,7 +314,7 @@ async def ensure_course_metrics(term_id: str, course_ids: List[str]) -> None:
     gpa_maps = await asyncio.gather(*(fetch_course_gpas(course_id) for course_id in stale))
     async with async_session_maker() as session:
         for course_id, gpas in zip(stale, gpa_maps):
-            sections = (await session.execute(select(Section).where(Section.course_id == course_id))).scalars().all()
+            sections = (await session.execute(select(Section).where(Section.term_id == term_id, Section.course_id == course_id))).scalars().all()
             instructor_names = sorted({section.instructor for section in sections if section.instructor})
             ratings = await asyncio.gather(*(fetch_professor_rating(name) for name in instructor_names))
             for name, (rating, reviews) in zip(instructor_names, ratings):
@@ -356,6 +356,7 @@ async def run_full_ingest(term_id: str, departments: List[str], include_ratings:
                         SyncState.key == f"metrics:{term_id}:{course_data['course_id']}"
                     ))
                 course = Course(
+                    term_id=term_id,
                     course_id=course_data["course_id"],
                     department=course_data["department"],
                     name=course_data["name"],
@@ -390,6 +391,7 @@ async def run_full_ingest(term_id: str, departments: List[str], include_ratings:
                         average_gpa = gpa_cache.get(gpa_key, 3.0)
 
                     stmt = select(Section).where(
+                        Section.term_id == term_id,
                         Section.course_id == course_data["course_id"],
                         Section.section_id == section_data["section_id"],
                     )
@@ -398,6 +400,7 @@ async def run_full_ingest(term_id: str, departments: List[str], include_ratings:
                         average_gpa = existing_sec.average_gpa
 
                     section_obj = Section(
+                        term_id=term_id,
                         section_id=section_data["section_id"],
                         course_id=course_data["course_id"],
                         instructor=instructor_name,

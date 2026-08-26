@@ -9,6 +9,7 @@ from app.database import async_session_maker
 from app.models import SyncState
 from app.services.ingest import run_full_ingest
 from app.services.walking import refresh_walking_cache
+from app.services.terms import current_term_id
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +30,15 @@ async def refresh_stale_data() -> None:
         logger.exception("Automatic walking cache refresh failed; cached fallbacks remain available")
 
     async with async_session_maker() as session:
-        known = (await session.execute(select(SyncState.key).where(SyncState.key.like(f"soc:{settings.DEFAULT_TERM}:%")))).scalars().all()
+        active_term = current_term_id()
+        known = (await session.execute(select(SyncState.key).where(SyncState.key.like(f"soc:{active_term}:%")))).scalars().all()
     departments = set(settings.AUTO_SYNC_DEPARTMENTS)
     departments.update(key.rsplit(":", 1)[-1] for key in known)
     for department in sorted(departments):
-        key = f"soc:{settings.DEFAULT_TERM}:{department}"
+        key = f"soc:{active_term}:{department}"
         try:
             if await _is_stale(key, timedelta(hours=settings.DATA_REFRESH_HOURS)):
-                await run_full_ingest(settings.DEFAULT_TERM, [department], include_ratings=False)
+                await run_full_ingest(active_term, [department], include_ratings=False)
         except Exception:
             logger.exception("Automatic SOC refresh failed for %s", department)
 

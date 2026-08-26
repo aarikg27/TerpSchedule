@@ -300,12 +300,18 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
       {selectedSection && (() => {
         const { section, meeting } = selectedSection;
         const colors = getCourseColor(section.course_id);
-        const mapsUrl = meeting.building && meeting.next_building
-          ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(`${meeting.building}, University of Maryland, College Park`)}&destination=${encodeURIComponent(`${meeting.next_building}, University of Maryland, College Park`)}&travelmode=walking`
+        const origin = meeting.building_latitude != null && meeting.building_longitude != null
+          ? `${meeting.building_latitude},${meeting.building_longitude}`
+          : meeting.building_name ? `${meeting.building_name}, University of Maryland, College Park` : null;
+        const destination = meeting.next_building_latitude != null && meeting.next_building_longitude != null
+          ? `${meeting.next_building_latitude},${meeting.next_building_longitude}`
+          : meeting.next_building_name ? `${meeting.next_building_name}, University of Maryland, College Park` : null;
+        const mapsUrl = origin && destination
+          ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=walking`
           : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedSection(null); }}>
-            <div role="dialog" aria-modal="true" aria-label={`${section.course_id} section details`} className="w-full max-w-lg overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-2xl">
+            <div role="dialog" aria-modal="true" aria-label={`${section.course_id} section details`} className="course-details-modal w-full max-w-lg overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-2xl">
               <div className={`border-b p-6 ${colors.bg} ${colors.border}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -327,8 +333,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
                 {meeting.next_building ? (
                   <div className="rounded-2xl bg-blue-50 p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-blue-900"><Navigation className="w-4 h-4" /> Next: {meeting.next_course_id} in {meeting.next_building} {meeting.next_room || ''}</div>
-                    <div className="mt-1 text-xs text-blue-700">Starts at {meeting.next_start} · about {meeting.walk_to_next_minutes ?? '—'} minutes ({meeting.walk_to_next_meters ? `${meeting.walk_to_next_meters} m` : 'distance unavailable'})</div>
+                    <div className="mt-1 text-xs text-blue-700">Starts at {meeting.next_start} · estimated {meeting.walk_to_next_minutes ?? '—'} min ({meeting.walk_to_next_meters ? `${meeting.walk_to_next_meters} m` : 'distance unavailable'})</div>
                     {mapsUrl && <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500">Open walking directions in Google Maps <ExternalLink className="w-3 h-3" /></a>}
+                    <div className="mt-2 text-[10px] leading-relaxed text-blue-600/70">Campus estimate only. Google Maps provides current pedestrian routing.</div>
                   </div>
                 ) : <div className="rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">No class follows this meeting on the same day.</div>}
               </div>

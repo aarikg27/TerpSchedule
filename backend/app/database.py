@@ -7,7 +7,12 @@ from app.config import settings
 class Base(DeclarativeBase):
     pass
 
-engine = create_async_engine(settings.DATABASE_URL)
+database_url = settings.DATABASE_URL
+if database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
+elif database_url.startswith("postgresql://"):
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+engine = create_async_engine(database_url, pool_pre_ping=True)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -16,6 +21,43 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 
 async def init_db() -> None:
     async with engine.begin() as conn:
+        # Upgrade the original single-term SQLite schema in place. IDs are
+        # preserved so meeting rows remain attached to the same sections.
+        if database_url.startswith("sqlite"):
+            def schema_state(sync_conn):
+                inspector = inspect(sync_conn)
+                if "courses" not in inspector.get_table_names():
+                    return False
+                columns = {column["name"] for column in inspector.get_columns("courses")}
+                pk = set(inspector.get_pk_constraint("courses").get("constrained_columns") or [])
+                return "term_id" not in columns or pk != {"term_id", "course_id"}
+            needs_term_upgrade = await conn.run_sync(schema_state)
+            if needs_term_upgrade:
+                await conn.execute(text("PRAGMA foreign_keys=OFF"))
+                await conn.execute(text("ALTER TABLE meeting_times RENAME TO meeting_times_single_term"))
+                await conn.execute(text("ALTER TABLE sections RENAME TO sections_single_term"))
+                await conn.execute(text("ALTER TABLE courses RENAME TO courses_single_term"))
+                await conn.run_sync(Base.metadata.create_all)
+                await conn.execute(text("""
+                    INSERT INTO courses (term_id, course_id, department, name, credits, description)
+                    SELECT :term, course_id, department, name, credits, description FROM courses_single_term
+                """), {"term": settings.DEFAULT_TERM})
+                old_section_columns = await conn.run_sync(lambda sync_conn: {c["name"] for c in inspect(sync_conn).get_columns("sections_single_term")})
+                gpa_expr = "average_gpa" if "average_gpa" in old_section_columns else "3.0"
+                estimated_expr = "gpa_is_estimated" if "gpa_is_estimated" in old_section_columns else "1"
+                await conn.execute(text(f"""
+                    INSERT INTO sections (id, term_id, section_id, course_id, instructor, seats_total, open_seats, waitlist_count, average_gpa, gpa_is_estimated)
+                    SELECT id, :term, section_id, course_id, instructor, seats_total, open_seats, waitlist_count, {gpa_expr}, {estimated_expr}
+                    FROM sections_single_term
+                """), {"term": settings.DEFAULT_TERM})
+                await conn.execute(text("""
+                    INSERT INTO meeting_times (id, section_pk, day, start_time, end_time, building, room, class_type)
+                    SELECT id, section_pk, day, start_time, end_time, building, room, class_type FROM meeting_times_single_term
+                """))
+                await conn.execute(text("DROP TABLE meeting_times_single_term"))
+                await conn.execute(text("DROP TABLE sections_single_term"))
+                await conn.execute(text("DROP TABLE courses_single_term"))
+                await conn.execute(text("PRAGMA foreign_keys=ON"))
         await conn.run_sync(Base.metadata.create_all)
         # Lightweight compatibility migration for existing local databases.
         def section_columns(sync_conn):

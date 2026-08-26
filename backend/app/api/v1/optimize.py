@@ -10,6 +10,7 @@ from app.models.section import Section
 from app.models.meeting_time import MeetingTime
 from app.models.professor import Professor
 from app.models.building_distance import BuildingDistance
+from app.models.building import Building
 from app.schemas.optimize import OptimizeRequest, OptimizeResponse, RankedSchedule, ScheduleMetrics, SectionResult, MeetingResult
 from app.schemas.course import minutes_to_time_str
 from app.services.optimizer import ScheduleOptimizer, SolverSection, SolverMeeting
@@ -29,7 +30,7 @@ async def optimize_schedule(
     # 1. Query DB for all sections of requested courses with their meetings
     stmt = (
         select(Course)
-        .where(Course.course_id.in_(request.courses))
+        .where(Course.term_id == request.term, Course.course_id.in_(request.courses))
         .options(
             selectinload(Course.sections).selectinload(Section.meetings),
             selectinload(Course.sections).selectinload(Section.professor_rel)
@@ -68,6 +69,8 @@ async def optimize_schedule(
     distances = dist_result.scalars().all()
     building_distances = {(d.origin, d.destination): d.walk_minutes for d in distances}
     building_distance_meters = {(d.origin, d.destination): d.distance_meters for d in distances}
+    building_rows = (await db.execute(select(Building))).scalars().all()
+    buildings = {building.code: building for building in building_rows}
     
     # 4. Convert DB to SolverSection/SolverMeeting
     course_sections: dict[str, list[SolverSection]] = {}
@@ -165,15 +168,23 @@ async def optimize_schedule(
                 meetings_result = []
                 for m in sec.meetings:
                     transition = transitions.get(id(m))
+                    building = buildings.get(m.building) if m.building else None
+                    next_building = buildings.get(transition[1].building) if transition and transition[1].building else None
                     meetings_result.append(MeetingResult(
                         day=m.day,
                         start=minutes_to_time_str(m.start_min),
                         end=minutes_to_time_str(m.end_min),
                         building=m.building,
+                        building_name=building.name if building else None,
+                        building_latitude=building.latitude if building else None,
+                        building_longitude=building.longitude if building else None,
                         room=m.room,
                         class_type=m.class_type,
                         next_course_id=transition[0].course_id if transition else None,
                         next_building=transition[1].building if transition else None,
+                        next_building_name=next_building.name if next_building else None,
+                        next_building_latitude=next_building.latitude if next_building else None,
+                        next_building_longitude=next_building.longitude if next_building else None,
                         next_room=transition[1].room if transition else None,
                         next_start=minutes_to_time_str(transition[1].start_min) if transition else None,
                         walk_to_next_minutes=transition[2] if transition else None,

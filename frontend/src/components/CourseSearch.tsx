@@ -7,6 +7,7 @@ interface CourseSearchProps {
   selectedCourses: string[];
   onAddCourse: (courseId: string) => void;
   onRemoveCourse: (courseId: string) => void;
+  term: string;
 }
 
 const POPULAR_COURSES = ['CMSC132', 'MATH240', 'STAT400', 'ENGL101', 'CMSC216', 'PHYS161'];
@@ -15,6 +16,7 @@ export const CourseSearch: React.FC<CourseSearchProps> = ({
   selectedCourses,
   onAddCourse,
   onRemoveCourse,
+  term,
 }) => {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CourseSearchResult[]>([]);
@@ -32,7 +34,7 @@ export const CourseSearch: React.FC<CourseSearchProps> = ({
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const data = await searchCourses(query);
+        const data = await searchCourses(query, term);
         setResults(data);
         setIsOpen(true);
       } catch (err) {
@@ -43,7 +45,7 @@ export const CourseSearch: React.FC<CourseSearchProps> = ({
     }, 250);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, term]);
 
   // Click outside listener
   useEffect(() => {

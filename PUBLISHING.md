@@ -1,36 +1,70 @@
-# Publishing checklist
+# Publishing TerpSchedule
 
-TerpSchedule is feature-complete enough for a small public beta. Before calling it production-ready, complete the items below.
+TerpSchedule is prepared for a free public beta, but deployment requires accounts and production URLs that must belong to the project owner.
 
-## Required before a public beta
+## Recommended free beta stack
 
-- [ ] Choose a host for the FastAPI backend and a static host for the frontend.
-- [ ] Attach persistent storage. An ephemeral SQLite file will lose synchronized data on every deployment.
-- [ ] Set the production `DATABASE_URL` and `CORS_ORIGINS`.
-- [ ] Add the production API origin to the frontend build or reverse-proxy `/api` to FastAPI.
-- [ ] Add basic request/error logging and an uptime check for `/` and `/api/v1/sync-status`.
-- [ ] Add a privacy page explaining that the app does not require accounts and does not need student schedules to be retained.
-- [ ] Add Terms/Disclaimer language stating that Testudo controls official seats, registration, and waitlists.
-- [ ] Confirm Testudo and PlanetTerp usage expectations and identify the app with a responsible User-Agent/contact.
-- [ ] Run a complete Fall 2026 sync on the production database before sharing the link.
-- [ ] Test the deployed app on iPhone Safari, Android Chrome, and a narrow laptop viewport.
+- **Frontend:** Cloudflare Pages, built from `frontend` with `npm run build` and output directory `dist`.
+- **Backend:** Render free Web Service using the repository's `render.yaml`.
+- **Database:** Neon free PostgreSQL. Do not use SQLite on Render: its filesystem is ephemeral.
 
-## Strongly recommended after beta feedback
+Render's free backend sleeps after inactivity, so the first request can be slow. That tradeoff is acceptable for a small beta; move to paid compute only if usage justifies it.
 
-- [ ] Add a real migration tool such as Alembic before the next schema change.
-- [ ] Move from SQLite to PostgreSQL if multiple backend workers will write concurrently.
-- [ ] Add rate limiting to optimization and manual administrative refresh endpoints.
-- [ ] Add structured monitoring for failed Testudo, PlanetTerp, and UMD GIS refreshes.
-- [ ] Add a protected admin-only refresh endpoint and remove or protect the current public ingest endpoint.
-- [ ] Add automated end-to-end tests for course search, generation, availability filters, and calendar export.
-- [ ] Add term-aware database keys before supporting more than one semester in the UI.
-- [ ] Add accessibility testing for keyboard navigation, contrast, focus order, and screen readers.
-- [ ] Decide whether analytics are genuinely needed. If added, use a privacy-respecting option and disclose it.
+## Values you must provide
 
-## Known product limitations
+1. Create the Neon database and copy its connection string into Render as `DATABASE_URL`.
+2. Set `CONTACT_EMAIL` to a monitored project email. It is included in responsible upstream requests.
+3. Deploy the backend and copy its `https://...onrender.com` URL.
+4. Set Render `CORS_ORIGINS` to a JSON list containing the final frontend URL, for example `["https://terpschedule.pages.dev"]`.
+5. In Cloudflare Pages, set `VITE_API_ORIGIN` to the Render backend URL and redeploy.
+6. Keep Render's generated `ADMIN_SYNC_TOKEN` secret.
 
-- Only Fall 2026 is intentionally exposed. The current schema must become term-aware before a semester picker is safe.
-- Walking durations are cached estimates based on official UMD building coordinates, not turn-by-turn pedestrian routes.
-- A section with zero open seats may be waitlistable or completely closed; Testudo must make the final determination.
-- Instructor rating and GPA coverage varies. Neutral fallbacks are used when PlanetTerp has no data.
-- Each results tab receives its own highest-scoring 100 schedules, while counts reflect the full valid result set.
+## First production sync
+
+The refresh endpoint is intentionally hidden unless the admin token is supplied:
+
+```bash
+curl -X POST "https://YOUR-BACKEND.onrender.com/api/v1/ingest" \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Token: YOUR-ADMIN-TOKEN" \
+  -d '{"term":"202608","departments":["CMSC","MATH","STAT","ENGL","PHYS","BMGT","COMM","PSYC"]}'
+```
+
+Check `/health/ready` and `/api/v1/sync-status` afterward. The app will continue refreshing known departments automatically while the backend is awake.
+
+## Implemented launch safeguards
+
+- PostgreSQL/`asyncpg` support and production environment examples
+- CORS configuration and configurable frontend API origin
+- Protected administrative sync endpoint
+- Per-IP request limits, with a tighter optimization limit
+- Request status/duration logs and live/ready health checks
+- Privacy and Terms/Disclaimer dialogs
+- No account requirement and no analytics at launch
+- Responsible configurable User-Agent/contact for upstream requests
+- Security headers for the static frontend
+- Playwright interaction tests on desktop, iPhone, and Android viewports
+- Automated accessibility checks for critical issues
+
+## Deliberate product limits
+
+- Fall 2026 remains the only exposed term until the database receives a term-key migration. A fake semester picker would mix records and is intentionally not shipped.
+- Walking values are labeled estimates. Google Maps links use exact UMD coordinates and provide current pedestrian routing.
+- Testudo publishes seat and waitlist counts but does not reliably state whether a particular student is eligible to join a waitlist. Zero-seat sections remain labeled **waitlist or closed**.
+- Missing PlanetTerp GPA is shown as **No data**, never as a real 3.0. Neutral values are used only internally so schedules can still be ranked.
+- Each availability tab gets its own top 100 by score; displayed counts cover the full valid result set.
+
+## Before sharing the URL
+
+- Replace the placeholder contact email.
+- Run the production sync and verify several classes directly against Testudo.
+- Open the deployed app on a physical iPhone and Android phone; automated viewport tests cannot reproduce every mobile-browser behavior.
+- Read the Privacy and Terms text and adapt it if your data practices change.
+- Confirm Testudo, PlanetTerp, and UMD GIS usage expectations before promoting beyond a small beta.
+
+## After beta feedback
+
+- Complete the term-aware Alembic migration before adding another semester.
+- Replace in-process rate limiting with shared Redis-backed limits if multiple API workers are introduced.
+- Add external uptime alerts for `/health/ready` and structured error aggregation.
+- Consider analytics only if a concrete product question requires it; choose a privacy-respecting service and disclose it first.

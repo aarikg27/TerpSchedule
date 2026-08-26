@@ -112,6 +112,17 @@ body {
 .dark-mode .app-shell .bg-amber-50 { background-color: #3b2d12 !important; }
 .dark-mode .app-shell .bg-purple-50 { background-color: #30203e !important; }
 .dark-mode .app-shell .bg-emerald-50 { background-color: #14362a !important; }
+.dark-mode .app-shell .bg-slate-50 { background-color: #2c2c2e !important; }
+.dark-mode .app-shell .bg-blue-50 { background-color: #16263a !important; }
+.dark-mode .app-shell .course-details-modal { background-color: #1c1c1e !important; color: #f5f5f7 !important; }
+.dark-mode .app-shell .legal-dialog { background-color: #1c1c1e !important; color: #f5f5f7 !important; }
+.dark-mode .app-shell .auth-dialog { background-color: #1c1c1e !important; color: #f5f5f7 !important; }
+.dark-mode .app-shell .auth-dialog .text-slate-900 { color: #f5f5f7 !important; }
+.dark-mode .app-shell .legal-dialog .text-slate-900 { color: #f5f5f7 !important; }
+.dark-mode .app-shell .legal-dialog .text-slate-600 { color: #b6b6ba !important; }
+.dark-mode .app-shell .course-details-modal .text-blue-900 { color: #d5e8ff !important; }
+.dark-mode .app-shell .course-details-modal .text-blue-700,
+.dark-mode .app-shell .course-details-modal .text-blue-600 { color: #7bb8ff !important; }
 .dark-mode .app-shell .text-red-700 { color: #ff8a8a !important; }
 .dark-mode .app-shell .text-indigo-700 { color: #aeb4ff !important; }
 .dark-mode .app-shell .text-cyan-700 { color: #7be5ef !important; }

@@ -3,10 +3,16 @@ export interface Meeting {
   start: string;
   end: string;
   building?: string | null;
+  building_name?: string | null;
+  building_latitude?: number | null;
+  building_longitude?: number | null;
   room?: string | null;
   class_type?: string | null;
   next_course_id?: string | null;
   next_building?: string | null;
+  next_building_name?: string | null;
+  next_building_latitude?: number | null;
+  next_building_longitude?: number | null;
   next_room?: string | null;
   next_start?: string | null;
   walk_to_next_minutes?: number | null;
