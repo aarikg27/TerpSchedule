@@ -12,6 +12,8 @@ if database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
 elif database_url.startswith("postgresql://"):
     database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+# Neon publishes libpq-style `sslmode=require`; asyncpg expects `ssl=require`.
+database_url = database_url.replace("sslmode=require", "ssl=require")
 engine = create_async_engine(database_url, pool_pre_ping=True)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
