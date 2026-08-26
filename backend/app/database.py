@@ -2,18 +2,22 @@ from collections.abc import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import inspect, text
+from sqlalchemy.engine import make_url
 from app.config import settings
 
 class Base(DeclarativeBase):
     pass
 
-database_url = settings.DATABASE_URL
-if database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql+asyncpg://", 1)
-elif database_url.startswith("postgresql://"):
-    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-# Neon publishes libpq-style `sslmode=require`; asyncpg expects `ssl=require`.
-database_url = database_url.replace("sslmode=require", "ssl=require")
+database_url = make_url(settings.DATABASE_URL)
+if database_url.drivername in {"postgres", "postgresql"}:
+    # Neon publishes libpq connection parameters. asyncpg uses `ssl` and does
+    # not accept libpq's `channel_binding` keyword.
+    ssl_value = database_url.query.get("sslmode") or "require"
+    database_url = (
+        database_url.set(drivername="postgresql+asyncpg")
+        .difference_update_query(["sslmode", "channel_binding"])
+        .update_query_dict({"ssl": ssl_value})
+    )
 engine = create_async_engine(database_url, pool_pre_ping=True)
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -25,7 +29,7 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         # Upgrade the original single-term SQLite schema in place. IDs are
         # preserved so meeting rows remain attached to the same sections.
-        if database_url.startswith("sqlite"):
+        if database_url.drivername.startswith("sqlite"):
             def schema_state(sync_conn):
                 inspector = inspect(sync_conn)
                 if "courses" not in inspector.get_table_names():
