@@ -32,6 +32,12 @@ export async function deleteCloudSchedule(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+export async function renameCloudSchedule(id: string, name: string): Promise<void> {
+  if (!neonClient) return;
+  const { error } = await neonClient.from('user_saved_schedules').update({ name, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
 export async function loadPlannerState(): Promise<Record<string, unknown> | null> {
   if (!neonClient) return null;
   const { data, error } = await neonClient.from('user_planner_states').select('state').maybeSingle();

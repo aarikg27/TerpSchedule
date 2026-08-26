@@ -287,7 +287,13 @@ export const App: React.FC = () => {
             </div>
 
             <DirectRegistration schedule={activeSchedule} />
-            <ScheduleActions schedule={activeSchedule} term={term} onSelect={setActiveSchedule} />
+            <ScheduleActions
+              schedule={activeSchedule}
+              term={term}
+              onSelect={setActiveSchedule}
+              onClose={() => setActiveSchedule(null)}
+              onNew={() => { setActiveSchedule(null); setOptimizeResponse(null); setSelectedCourses([]); setError(null); setMobileTab('inputs'); }}
+            />
           </aside>
         </div>
       </main>

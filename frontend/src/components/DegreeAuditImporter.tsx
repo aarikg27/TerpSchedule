@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { FileUp, GraduationCap, LoaderCircle, Trash2, X } from 'lucide-react';
 import { parseDegreeAudit, type AuditSummary } from '../api/client';
 import { authClient, neonClient } from '../auth';
@@ -21,10 +22,10 @@ export const DegreeAuditImporter: React.FC<Props> = ({ onAddCourses }) => {
     setSummary(null); setSavedAt(null); setCloudSynced(false);
     try {
       const local = JSON.parse(localStorage.getItem(localKey) || 'null') as { summary: AuditSummary; savedAt: string } | null;
-      if (local) { setSummary(local.summary); setSavedAt(local.savedAt); }
+      if (local?.summary.parser_version === 3) { setSummary(local.summary); setSavedAt(local.savedAt); }
     } catch { /* ignore damaged local cache */ }
     if (user && neonClient) loadAuditSummary().then((stored) => {
-      if (stored) { setSummary(stored.summary); setSavedAt(stored.source_date || stored.updated_at); setCloudSynced(true); localStorage.setItem(localKey, JSON.stringify({ summary: stored.summary, savedAt: stored.source_date || stored.updated_at })); }
+      if (stored?.summary.parser_version === 3) { setSummary(stored.summary); setSavedAt(stored.source_date || stored.updated_at); setCloudSynced(true); localStorage.setItem(localKey, JSON.stringify({ summary: stored.summary, savedAt: stored.source_date || stored.updated_at })); }
     }).catch(() => undefined);
   }, [user?.id, localKey]);
   const upload = async (file?: File) => {
@@ -38,7 +39,7 @@ export const DegreeAuditImporter: React.FC<Props> = ({ onAddCourses }) => {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Could not read that audit.'); }
     finally { setLoading(false); }
   };
-  const suggested = summary ? [...new Set(summary.requirements.filter((item) => item.status === 'remaining').flatMap((item) => item.courses_mentioned))].filter((course) => !summary.in_progress_courses.includes(course)).slice(0, 12) : [];
+  const suggested = summary ? (summary.suggested_courses || []).filter((course) => !summary.in_progress_courses.includes(course) && !summary.completed_courses?.includes(course)).slice(0, 20) : [];
   const remainingRequirements = summary?.requirements.filter((item) => item.status === 'remaining' && !item.is_group) || [];
   const completedRequirements = summary?.requirements.filter((item) => item.status === 'complete' && !item.is_group) || [];
   const genEds = summary?.gen_ed_requirements || remainingRequirements.filter((item) => item.category?.toLowerCase().includes('gened'));
@@ -46,8 +47,8 @@ export const DegreeAuditImporter: React.FC<Props> = ({ onAddCourses }) => {
 
   return <>
     <button type="button" onClick={() => setOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-semibold text-slate-300 hover:border-slate-500"><GraduationCap className="h-4 w-4"/> {summary ? 'View degree progress' : 'Import degree audit'}</button>
-    {open && <div className="fixed inset-0 z-[80] grid place-items-center bg-black/55 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Import degree audit">
-      <div className="audit-dialog max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10">
+    {open && createPortal(<div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Import degree audit">
+      <div className="audit-dialog max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10">
         <div className="flex items-start justify-between"><div><h2 className="text-xl font-bold text-slate-100">Import your UMD degree audit</h2><p className="mt-1 text-xs text-slate-400">No AI required. The PDF is parsed for this request and is not retained.</p></div><button type="button" aria-label="Close" onClick={() => setOpen(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-800"><X className="h-4 w-4"/></button></div>
         <ol className="my-4 grid gap-2 rounded-2xl bg-slate-950/60 p-4 text-xs text-slate-300 sm:grid-cols-3">
           <li><strong className="block text-white">1. Testudo</strong>Open Degree Audit and run a new audit.</li>
@@ -68,6 +69,6 @@ export const DegreeAuditImporter: React.FC<Props> = ({ onAddCourses }) => {
           {!!suggested.length && <div className="rounded-2xl border border-slate-700 p-3"><p className="text-xs font-semibold text-slate-200">Courses mentioned in remaining requirements</p><p className="mt-1 text-[10px] text-slate-500">These may be alternatives, not mandates. Add only courses you have chosen after reviewing the requirement.</p><div className="mt-2 flex flex-wrap gap-1.5">{suggested.map((course) => <button type="button" onClick={() => onAddCourses([course])} key={course} className="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-slate-200 hover:bg-slate-700">+ {course}</button>)}</div></div>}
           <p className="text-[10px] text-slate-500">{summary.disclaimer}</p></div>}
       </div>
-    </div>}
+    </div>, document.body)}
   </>;
 };

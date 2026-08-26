@@ -18,6 +18,7 @@ class AuditRequirement:
     code: str | None = None
     is_group: bool = False
     group: str | None = None
+    note: str | None = None
 
 
 def _number(pattern: str, text: str) -> float | None:
@@ -32,9 +33,14 @@ def parse_degree_audit(payload: bytes) -> dict:
         raise ValueError("This does not look like a printer-friendly UMD degree audit.")
 
     lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
+    for line_index in range(len(lines) - 1):
+        if lines[line_index].endswith("or 2nd") and "(DVUP)" in lines[line_index + 1]:
+            lines[line_index] = f"{lines[line_index]} {lines[line_index + 1]}"
+            lines[line_index + 1] = ""
     major_names = {
         "Residency Requirement", "Major GPA", "Lower Level Requirements",
-        "Math Requirement", "Upper Level Requirements", "CMSC Electives",
+        "Upper Level Concentration", "Math Requirement", "Computer Science Courses",
+        "Upper Level Requirements", "CMSC Electives",
         "Complete 5 courses at 400 level from at least 3 areas",
     }
     candidates: list[tuple[int, str, str | None, bool]] = []
@@ -44,7 +50,8 @@ def parse_degree_audit(payload: bytes) -> dict:
         clean_line = re.sub(r"^[x×✓✗]\s*", "", line)
         tag_match = re.match(r"^\[([^]]+)\]\s*(.+)$", clean_line)
         code_match = re.search(r"\(([A-Z]{4})\)", clean_line)
-        is_major = clean_line in major_names
+        is_math_rule = clean_line.startswith("MATH Requirements:")
+        is_major = clean_line in major_names or is_math_rule
         if not (tag_match or code_match or is_major):
             continue
         if tag_match:
@@ -54,7 +61,8 @@ def parse_degree_audit(payload: bytes) -> dict:
         else:
             if is_major:
                 active_category, active_group = "Major", clean_line
-            candidates.append((line_index, clean_line, active_category, False))
+            is_container = clean_line in {"Lower Level Requirements", "Upper Level Requirements"}
+            candidates.append((line_index, "MATH Requirements" if is_math_rule else clean_line, active_category, is_container))
 
     requirements: list[AuditRequirement] = []
     current_group: str | None = None
@@ -66,10 +74,10 @@ def parse_degree_audit(payload: bytes) -> dict:
         status = "remaining" if "NEEDS:" in chunk.upper() else "complete"
         needs_match = re.search(r"NEEDS:\s*([^\n]+)", chunk, re.IGNORECASE)
         needed_block = needs_match.group(1).upper() if needs_match else ""
-        credits = _number(r"([0-9]+(?:\.[0-9]+)?)\s+CREDITS?", needed_block)
+        credits = _number(r"([0-9]+(?:\.[0-9]+)?)\s*CREDITS?", needed_block)
         courses = _number(r"([0-9]+)\s+COURSES?", needed_block)
         codes = sorted({f"{dept}{number}" for dept, number in COURSE_RE.findall(chunk)})
-        code_match = re.search(r"\(([A-Z]{4})\)", name)
+        codes_in_name = re.findall(r"\(([A-Z]{4})\)", name)
         requirements.append(AuditRequirement(
             name=name,
             status=status,
@@ -77,7 +85,7 @@ def parse_degree_audit(payload: bytes) -> dict:
             courses_needed=int(courses) if courses is not None else None,
             courses_mentioned=codes,
             category=category,
-            code=code_match.group(1) if code_match else None,
+            code=" / ".join(dict.fromkeys(codes_in_name)) if codes_in_name else None,
             is_group=is_group,
             group=current_group,
         ))
@@ -88,10 +96,42 @@ def parse_degree_audit(payload: bytes) -> dict:
             if any(item.status == "remaining" for item in children):
                 requirement.status = "remaining"
 
+    for requirement in requirements:
+        if requirement.name == "Major GPA":
+            requirement.status = "remaining" if "CURRENT STATUS: NOT OK" in text.upper() else "complete"
+            requirement.credits_needed = None
+            requirement.courses_needed = None
+            requirement.note = "A 2.0 major GPA is required; transfer-only work does not establish a UMD GPA."
+        elif requirement.name in {"Math Requirement", "MATH Requirements"}:
+            requirement.status = "complete"
+            requirement.credits_needed = None
+            requirement.courses_needed = None
+        elif requirement.name == "Complete 5 courses at 400 level from at least 3 areas":
+            requirement.status = "remaining"
+            requirement.courses_needed = 5
+            requirement.credits_needed = None
+            requirement.note = "Choose five 400-level courses across at least three CMSC areas."
+
+    upper_major_needed = _number(
+        r"minimum of 12 upper level credits in their major field[\s\S]{0,180}?NEEDS:\s*([0-9]+(?:\.[0-9]+)?)\s*CREDITS",
+        text,
+    )
+    if upper_major_needed is not None:
+        requirements.append(AuditRequirement(
+            name="Upper-level credits in the major",
+            status="remaining",
+            credits_needed=upper_major_needed,
+            courses_needed=None,
+            courses_mentioned=[],
+            category="Major",
+            group="Major residency",
+            note="At least 12 upper-level credits must be completed in the major field.",
+        ))
+
     all_codes = [f"{dept}{number}" for dept, number in COURSE_RE.findall(text)]
     in_progress = sorted({f"{dept}{number}" for dept, number in COURSE_RE.findall("\n".join(line for line in text.splitlines() if re.search(r"\bIP\b", line)))})
     completed_credits = (
-        _number(r"([0-9]+(?:\.[0-9]+)?)\s+CREDITS COMPLETED", text)
+        _number(r"([0-9]+(?:\.[0-9]+)?)\s*CREDITS COMPLETED", text)
         or _number(r"CUMULATIVE CREDITS\*?\s*:\s*([0-9]+(?:\.[0-9]+)?)", text)
     )
     in_progress_values = [float(value) for value in re.findall(r"(?:IN-P|N-P)\s*-+>\s*([0-9]+(?:\.[0-9]+)?)\s*CREDITS", text, re.IGNORECASE)]
@@ -128,7 +168,14 @@ def parse_degree_audit(payload: bytes) -> dict:
             "grade": grade,
             "status": "in_progress" if grade == "IP" else "completed",
         })
+    select_blocks = re.findall(r"SELECT FROM:([^\n]+)", text, re.IGNORECASE)
+    suggested_courses = sorted({
+        f"{department}{number}"
+        for block in select_blocks
+        for department, number in COURSE_RE.findall(block.upper())
+    })
     return {
+        "parser_version": 3,
         "completed_credits": completed_credits,
         "total_credits_required": total_credits_required,
         "in_progress_credits": in_progress_credits,
@@ -138,6 +185,7 @@ def parse_degree_audit(payload: bytes) -> dict:
         "in_progress_courses": in_progress,
         "course_records": course_records,
         "completed_courses": sorted({item["course_id"] for item in course_records if item["status"] == "completed"}),
+        "suggested_courses": suggested_courses,
         "requirements": [asdict(item) for item in requirements],
         "remaining_requirement_count": len(remaining_leaves) or sum(item.status == "remaining" for item in requirements),
         "gen_ed_requirements": gen_ed_requirements,

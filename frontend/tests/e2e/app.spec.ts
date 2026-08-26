@@ -52,3 +52,26 @@ test('shows the landing page first and opens the planner', async ({ page }) => {
   if (await inputsTab.isVisible()) await inputsTab.click();
   await expect(page.getByText('Target Courses')).toBeVisible();
 });
+
+test('saves, renames, restores, and closes a schedule', async ({ page }) => {
+  await page.getByRole('button', { name: /start planning/i }).click();
+  const inputsTab = page.getByRole('button', { name: 'Inputs' });
+  if (await inputsTab.isVisible()) await inputsTab.click();
+  await page.getByRole('button', { name: /generate schedules/i }).click();
+  const rankingTab = page.getByRole('button', { name: 'Rankings' });
+  if (await rankingTab.isVisible()) await rankingTab.click();
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /rename schedule 1/i }).click();
+  const rename = page.getByRole('textbox', { name: /rename schedule 1/i });
+  await rename.fill('Campus compact');
+  await rename.press('Enter');
+  await expect(page.getByText('Campus compact')).toBeVisible();
+  await page.reload();
+  if (await rankingTab.isVisible()) await rankingTab.click();
+  await expect(page.getByText('Campus compact')).toBeVisible();
+  await page.getByText('Campus compact').click();
+  await page.getByRole('button', { name: /close schedule/i }).click();
+  const gridTab = page.getByRole('button', { name: 'Calendar' });
+  if (await gridTab.isVisible()) await gridTab.click();
+  await expect(page.getByText('No Schedule Generated')).toBeVisible();
+});
