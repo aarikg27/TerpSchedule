@@ -130,3 +130,7 @@ class OptimizeResponse(BaseModel):
     waitlist_schedules_count: int = 0
     open_schedules: list[RankedSchedule] = []
     waitlist_schedules: list[RankedSchedule] = []
+    section_options_by_course: dict[str, int] = {}
+    search_space_size: int = 0
+    search_complete: bool = True
+    applied_constraints: list[str] = []

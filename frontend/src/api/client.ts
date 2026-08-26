@@ -67,3 +67,19 @@ export async function getSyncStatus(): Promise<SyncStatus> {
   if (!res.ok) throw new Error('Could not read sync status');
   return res.json();
 }
+
+export interface AuditRequirement { name: string; status: 'complete' | 'remaining'; credits_needed: number | null; courses_needed: number | null; courses_mentioned: string[] }
+export interface AuditSummary { completed_credits: number | null; courses_found: string[]; in_progress_courses: string[]; requirements: AuditRequirement[]; remaining_requirement_count: number; disclaimer: string }
+export async function parseDegreeAudit(file: File): Promise<AuditSummary> {
+  const body = new FormData(); body.append('file', file);
+  const res = await fetch(`${API_BASE}/degree-audit/parse`, { method: 'POST', body });
+  if (!res.ok) { const error = await res.json().catch(() => ({ detail: 'Could not read that audit.' })); throw new Error(error.detail); }
+  return res.json();
+}
+export interface SectionStatus { course_id: string; section_id: string; found: boolean; open_seats: number; waitlist_count: number }
+export async function getSectionStatuses(sectionStrings: string[], term: string): Promise<SectionStatus[]> {
+  const params = new URLSearchParams({ sections: sectionStrings.join(','), term });
+  const res = await fetch(`${API_BASE}/courses/section-status?${params}`);
+  if (!res.ok) throw new Error('Could not refresh section availability.');
+  return res.json();
+}

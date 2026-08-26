@@ -12,6 +12,10 @@ import { getAvailableTerms, type AvailableTerm } from './api/client';
 import { AlertCircle, Calendar, Sliders, BarChart3 } from 'lucide-react';
 import { LegalDialog, type LegalPage } from './components/LegalDialog';
 import { LandingPage } from './components/LandingPage';
+import { ScheduleActions } from './components/ScheduleActions';
+import { DegreeAuditImporter } from './components/DegreeAuditImporter';
+import { authClient, neonClient } from './auth';
+import { loadPlannerState, savePlannerState } from './api/workspace';
 
 export const App: React.FC = () => {
   const [term, setTerm] = useState('202608');
@@ -54,6 +58,9 @@ export const App: React.FC = () => {
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('terpschedule-theme') as 'light' | 'dark' | 'system') || 'system');
   const [legalPage, setLegalPage] = useState<LegalPage | null>(null);
   const [page, setPage] = useState<'landing' | 'planner'>(() => window.location.pathname === '/planner' ? 'planner' : 'landing');
+  const [workspaceReady, setWorkspaceReady] = useState(false);
+  const session = authClient?.useSession();
+  const workspaceUser = session?.data?.user;
 
   useEffect(() => {
     const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -65,6 +72,34 @@ export const App: React.FC = () => {
     const onPopState = () => setPage(window.location.pathname === '/planner' ? 'planner' : 'landing');
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    setWorkspaceReady(false);
+    if (!workspaceUser || !neonClient) { setWorkspaceReady(true); return; }
+    loadPlannerState().then((state) => {
+      if (Array.isArray(state?.selectedCourses)) setSelectedCourses(state.selectedCourses as string[]);
+      if (typeof state?.term === 'string') setTerm(state.term);
+      if (state?.constraints && typeof state.constraints === 'object') setConstraints(state.constraints as Constraints);
+      if (Array.isArray(state?.preferenceRanking)) setPreferenceRanking(state.preferenceRanking as PreferenceRank[]);
+    }).catch(() => undefined).finally(() => setWorkspaceReady(true));
+  }, [workspaceUser?.id]);
+
+  useEffect(() => {
+    if (!workspaceReady || !workspaceUser || !neonClient) return;
+    const timer = window.setTimeout(() => {
+      savePlannerState(workspaceUser.id, { selectedCourses, term, constraints, preferenceRanking }).catch(() => undefined);
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [workspaceReady, workspaceUser?.id, selectedCourses, term, constraints, preferenceRanking]);
+
+  useEffect(() => {
+    const encoded = window.location.hash.startsWith('#share=') ? window.location.hash.slice(7) : '';
+    if (!encoded) return;
+    try {
+      const shared = JSON.parse(decodeURIComponent(atob(encoded))) as { term: string; schedule: RankedSchedule };
+      if (shared?.schedule?.sections?.length) { setTerm(shared.term); setActiveSchedule(shared.schedule); }
+    } catch { setError('This shared schedule link is invalid or incomplete.'); }
   }, []);
 
   const openPlanner = () => { window.history.pushState({}, '', '/planner'); setPage('planner'); window.scrollTo(0, 0); };
@@ -200,6 +235,7 @@ export const App: React.FC = () => {
               onAddCourse={handleAddCourse}
               onRemoveCourse={handleRemoveCourse}
             />
+            <DegreeAuditImporter onAddCourses={(courses) => setSelectedCourses((current) => [...new Set([...current, ...courses])])} />
 
             <ConstraintPanel
               constraints={constraints}
@@ -251,6 +287,7 @@ export const App: React.FC = () => {
             </div>
 
             <DirectRegistration schedule={activeSchedule} />
+            <ScheduleActions schedule={activeSchedule} term={term} onSelect={setActiveSchedule} />
           </aside>
         </div>
       </main>

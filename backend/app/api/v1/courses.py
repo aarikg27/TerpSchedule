@@ -15,6 +15,33 @@ import re
 
 router = APIRouter()
 
+@router.get("/section-status")
+async def section_status(
+    sections: str = Query(..., description="Comma-separated COURSE-SECTION values"),
+    term: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    requested = []
+    for value in sections.split(','):
+        if '-' in value:
+            course_id, section_id = value.upper().strip().split('-', 1)
+            requested.append((course_id, section_id))
+    if not requested or len(requested) > 30:
+        raise HTTPException(status_code=422, detail="Provide between 1 and 30 course sections.")
+    selected_term = term or settings.DEFAULT_TERM
+    rows = (await db.execute(select(Section).where(
+        Section.term_id == selected_term,
+        Section.course_id.in_([course for course, _ in requested]),
+    ))).scalars().all()
+    found = {(row.course_id, row.section_id): row for row in rows}
+    return [{
+        "course_id": course,
+        "section_id": section,
+        "found": (course, section) in found,
+        "open_seats": found[(course, section)].open_seats if (course, section) in found else 0,
+        "waitlist_count": found[(course, section)].waitlist_count if (course, section) in found else 0,
+    } for course, section in requested]
+
 @router.get("", response_model=list[CourseSearchResult])
 async def search_courses(
     search: str | None = None,

@@ -217,6 +217,22 @@ async def optimize_schedule(
     execution_time_ms = (end_time - start_time) * 1000
     
     # 10. Return response
+    applied_constraints = []
+    if request.constraints.earliest_start_time > 480 or request.constraints.latest_end_time < 1320:
+        applied_constraints.append("time window")
+    if request.constraints.blocked_days:
+        applied_constraints.append("days free")
+    if request.constraints.max_gap_minutes is not None:
+        applied_constraints.append(f"max gap {request.constraints.max_gap_minutes}m")
+    if request.constraints.avoid_professors:
+        applied_constraints.append("avoided instructors")
+    if request.constraints.preferred_instructors:
+        applied_constraints.append("required instructors")
+    section_counts = {course_id: len(sections) for course_id, sections in course_sections.items()}
+    search_space_size = 1
+    for count in section_counts.values():
+        search_space_size *= count
+
     return OptimizeResponse(
         total_combinations_checked=optimizer.combinations_checked,
         valid_schedules_count=len(valid_schedules),
@@ -226,4 +242,8 @@ async def optimize_schedule(
         waitlist_schedules_count=waitlist_count,
         open_schedules=build_ranked(top_open),
         waitlist_schedules=build_ranked(top_waitlist),
+        section_options_by_course=section_counts,
+        search_space_size=search_space_size,
+        search_complete=not optimizer.timed_out,
+        applied_constraints=applied_constraints,
     )

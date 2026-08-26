@@ -65,6 +65,30 @@ async def init_db() -> None:
                 await conn.execute(text("DROP TABLE courses_single_term"))
                 await conn.execute(text("PRAGMA foreign_keys=ON"))
         await conn.run_sync(Base.metadata.create_all)
+        if database_url.drivername.startswith("postgresql"):
+            # Data API access is deny-by-default. Its authenticated role can
+            # only reach rows owned by the JWT user exposed by auth.user_id().
+            await conn.execute(text("""
+                DO $$ BEGIN
+                  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'authenticated') THEN
+                    GRANT USAGE ON SCHEMA public TO authenticated;
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON user_saved_schedules, user_planner_states TO authenticated;
+                  END IF;
+                END $$
+            """))
+            for statement in (
+                "ALTER TABLE user_saved_schedules ENABLE ROW LEVEL SECURITY",
+                "ALTER TABLE user_planner_states ENABLE ROW LEVEL SECURITY",
+                "DROP POLICY IF EXISTS user_saved_schedules_owner ON user_saved_schedules",
+                """CREATE POLICY user_saved_schedules_owner ON user_saved_schedules
+                    FOR ALL USING (auth.user_id()::text = user_id)
+                    WITH CHECK (auth.user_id()::text = user_id)""",
+                "DROP POLICY IF EXISTS user_planner_states_owner ON user_planner_states",
+                """CREATE POLICY user_planner_states_owner ON user_planner_states
+                    FOR ALL USING (auth.user_id()::text = user_id)
+                    WITH CHECK (auth.user_id()::text = user_id)""",
+            ):
+                await conn.execute(text(statement))
         # Lightweight compatibility migration for existing local databases.
         def section_columns(sync_conn):
             return {column["name"] for column in inspect(sync_conn).get_columns("sections")}

@@ -62,6 +62,16 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
           <span>{response.execution_time_ms.toFixed(1)}ms</span>
         </div>
       </div>
+      <details className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-[10px] leading-relaxed text-slate-400">
+        <summary className="cursor-pointer font-semibold text-slate-200">How this search was counted</summary>
+        <div className="mt-2 space-y-1">
+          <p>{Object.entries(response.section_options_by_course || {}).map(([course, count]) => `${course}: ${count} sections`).join(' · ')}</p>
+          <p>{(response.search_space_size || 0).toLocaleString()} raw section combinations before conflicts and filters.</p>
+          <p>Checked means search-tree states explored, not UMD catalog courses.</p>
+          {!!response.applied_constraints?.length && <p>Active filters: {response.applied_constraints.join(', ')}.</p>}
+          {!response.search_complete && <p className="font-semibold text-amber-400">The search hit its time limit; these are the best results found so far.</p>}
+        </div>
+      </details>
 
       {/* Schedule List */}
       <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">

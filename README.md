@@ -16,6 +16,10 @@ Choose courses, set the boundaries that matter to you, and rank preferences such
 - Use Light, Dark, or System appearance from the settings menu.
 - Compare instructor ratings, historical GPA, idle time, campus days, and estimated walks.
 - Copy section numbers or export a selected schedule as an `.ics` calendar.
+- Optionally sign in to sync selected courses, preferences, and saved schedules across devices.
+- Import a printer-friendly UMD degree audit for a deterministic, no-AI summary of remaining requirements.
+- Recheck exact saved sections to see whether previously full seats have opened.
+- Share a schedule with a private link that carries the schedule in the URL instead of publishing it to a public directory.
 
 Seat counts are planning information, not a registration guarantee. Always confirm final availability and waitlist eligibility in Testudo.
 
@@ -55,6 +59,8 @@ npm run dev
 ```
 
 Open `http://localhost:5173`.
+
+Accounts are optional. To enable account sync locally, set `VITE_NEON_AUTH_URL` and `VITE_NEON_DATA_API_URL` in `frontend/.env.local`. The backend creates user workspace tables and applies owner-only PostgreSQL row-level-security policies in production.
 
 ## Run with Docker
 

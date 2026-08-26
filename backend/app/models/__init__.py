@@ -5,6 +5,7 @@ from app.models.meeting_time import MeetingTime
 from app.models.building_distance import BuildingDistance
 from app.models.building import Building
 from app.models.sync_state import SyncState
+from app.models.user_workspace import UserSavedSchedule, UserPlannerState
 
 __all__ = [
     "Course",
@@ -14,4 +15,6 @@ __all__ = [
     "BuildingDistance",
     "Building",
     "SyncState",
+    "UserSavedSchedule",
+    "UserPlannerState",
 ]

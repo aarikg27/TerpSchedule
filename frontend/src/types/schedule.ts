@@ -60,6 +60,10 @@ export interface OptimizeResponse {
   waitlist_schedules_count: number;
   open_schedules: RankedSchedule[];
   waitlist_schedules: RankedSchedule[];
+  section_options_by_course: Record<string, number>;
+  search_space_size: number;
+  search_complete: boolean;
+  applied_constraints: string[];
 }
 
 export interface Constraints {
