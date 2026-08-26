@@ -5,6 +5,12 @@ export interface Meeting {
   building?: string | null;
   room?: string | null;
   class_type?: string | null;
+  next_course_id?: string | null;
+  next_building?: string | null;
+  next_room?: string | null;
+  next_start?: string | null;
+  walk_to_next_minutes?: number | null;
+  walk_to_next_meters?: number | null;
 }
 
 export interface Section {
@@ -13,6 +19,7 @@ export interface Section {
   instructor?: string | null;
   rating?: number | null;
   gpa?: number | null;
+  gpa_available: boolean;
   seats_total: number;
   open_seats: number;
   waitlist_count: number;
@@ -43,6 +50,10 @@ export interface OptimizeResponse {
   valid_schedules_count: number;
   execution_time_ms: number;
   schedules: RankedSchedule[];
+  registerable_schedules_count: number;
+  waitlist_schedules_count: number;
+  open_schedules: RankedSchedule[];
+  waitlist_schedules: RankedSchedule[];
 }
 
 export interface Constraints {

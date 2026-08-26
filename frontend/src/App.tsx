@@ -4,11 +4,9 @@ import { CourseSearch } from './components/CourseSearch';
 import { ConstraintPanel } from './components/ConstraintPanel';
 import { WeightSliders } from './components/WeightSliders';
 import { CalendarGrid } from './components/CalendarGrid';
-import { ScheduleRadar } from './components/ScheduleRadar';
 import { ScheduleRanking } from './components/ScheduleRanking';
 import { DirectRegistration } from './components/DirectRegistration';
-import { IngestModal } from './components/IngestModal';
-import type { Constraints, Weights, PreferenceRank, OptimizeResponse } from './types/schedule';
+import type { Constraints, Weights, PreferenceRank, OptimizeResponse, RankedSchedule } from './types/schedule';
 import { optimizeSchedules } from './api/client';
 import { AlertCircle, Calendar, Sliders, BarChart3 } from 'lucide-react';
 
@@ -40,16 +38,22 @@ export const App: React.FC = () => {
     { criterion: 'professor_quality', rank: 1 },
     { criterion: 'compactness', rank: 2 },
     { criterion: 'campus_days', rank: 3 },
-    { criterion: 'transit_ease', rank: 3 },
+    { criterion: 'transit_ease', rank: 4 },
   ]);
 
   const [optimizeResponse, setOptimizeResponse] = useState<OptimizeResponse | null>(null);
-  const [activeScheduleIndex, setActiveScheduleIndex] = useState<number>(0);
+  const [activeSchedule, setActiveSchedule] = useState<RankedSchedule | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [isIngestModalOpen, setIsIngestModalOpen] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<'inputs' | 'grid' | 'ranking'>('grid');
   const [visibleMeetingTypes, setVisibleMeetingTypes] = useState<string[]>(['Lecture', 'Discussion', 'Lab', 'Online', 'Other']);
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>(() => (localStorage.getItem('terpschedule-theme') as 'light' | 'dark' | 'system') || 'system');
+
+  useEffect(() => {
+    const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.classList.toggle('dark-mode', dark);
+    localStorage.setItem('terpschedule-theme', theme);
+  }, [theme]);
 
   const handleAddCourse = (courseId: string) => {
     if (!selectedCourses.includes(courseId)) {
@@ -76,7 +80,7 @@ export const App: React.FC = () => {
       });
 
       setOptimizeResponse(data);
-      setActiveScheduleIndex(0);
+      setActiveSchedule(data.schedules[0] || null);
       if (data.valid_schedules_count === 0) {
         setError('No conflict-free schedules match your constraints. Try widening time limits or relaxing blocked days.');
       } else {
@@ -101,17 +105,13 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedCourses, constraints, preferenceRanking, term]);
 
-  const activeSchedule =
-    optimizeResponse && optimizeResponse.schedules.length > 0
-      ? optimizeResponse.schedules[activeScheduleIndex] || null
-      : null;
-
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="app-shell min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <Navbar
         term={term}
         activeSchedule={activeSchedule}
-        onOpenIngestModal={() => setIsIngestModalOpen(true)}
+        theme={theme}
+        onThemeChange={setTheme}
       />
 
       {/* Mobile Tab Navigation */}
@@ -146,7 +146,7 @@ export const App: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-6">
+      <main className="flex-1 max-w-[1500px] w-full mx-auto p-4 lg:p-6">
         {error && (
           <div className="mb-4 p-3 bg-red-950/70 border border-red-800 rounded-xl flex items-center gap-2.5 text-xs text-red-200 shadow-lg">
             <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
@@ -158,7 +158,7 @@ export const App: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* LEFT PANEL: Inputs, Constraints, Sliders */}
           <aside
-            className={`lg:col-span-3 space-y-4 bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-xl ${
+            className={`lg:col-span-3 lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:overflow-x-hidden space-y-4 bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-xl ${
               mobileTab !== 'inputs' ? 'hidden lg:block' : ''
             }`}
           >
@@ -198,24 +198,22 @@ export const App: React.FC = () => {
               mobileTab !== 'ranking' ? 'hidden lg:block' : ''
             }`}
           >
-            <ScheduleRadar schedule={activeSchedule} />
-
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 shadow-md space-y-3">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-md space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                   Top Ranked Schedules
                 </span>
                 {optimizeResponse && (
-                  <span className="text-xs font-mono font-bold text-emerald-400">
-                    {optimizeResponse.schedules.length} found
+                  <span className="text-[10px] font-medium text-slate-500">
+                    {optimizeResponse.valid_schedules_count.toLocaleString()} found · showing top {optimizeResponse.schedules.length}
                   </span>
                 )}
               </div>
 
               <ScheduleRanking
                 response={optimizeResponse}
-                activeIndex={activeScheduleIndex}
-                onSelectSchedule={setActiveScheduleIndex}
+                activeSchedule={activeSchedule}
+                onSelectSchedule={setActiveSchedule}
               />
             </div>
 
@@ -224,12 +222,6 @@ export const App: React.FC = () => {
         </div>
       </main>
 
-      {/* Testudo Sync Modal */}
-      <IngestModal
-        isOpen={isIngestModalOpen}
-        onClose={() => setIsIngestModalOpen(false)}
-        term={term}
-      />
     </div>
   );
 };

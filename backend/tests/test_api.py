@@ -15,7 +15,10 @@ async def test_health_check():
 
 
 @pytest.mark.asyncio
-async def test_optimize_and_courses_flow():
+async def test_optimize_and_courses_flow(monkeypatch):
+    async def skip_external_metrics(*args, **kwargs):
+        return None
+    monkeypatch.setattr("app.api.v1.optimize.ensure_course_metrics", skip_external_metrics)
     await init_db()
 
     # Seed or merge mock course & section data into DB for testing
@@ -99,6 +102,8 @@ async def test_optimize_and_courses_flow():
         assert top_sched["rank"] == 1
         assert top_sched["total_score"] > 0
         assert len(top_sched["sections"]) == 2
+        assert opt_data["registerable_schedules_count"] >= 1
+        assert len(opt_data["open_schedules"]) >= 1
 
         # Export iCal endpoint
         export_res = await ac.get("/api/v1/export/ical?sections=CMSC132-0101,MATH240-0201")

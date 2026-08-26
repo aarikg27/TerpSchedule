@@ -16,3 +16,105 @@
 
   button, select, input { @apply transition-colors; }
 }
+
+/* Product theme: quiet surfaces, crisp typography, one intentional accent. */
+body {
+  background: #f5f5f7 !important;
+  color: #1d1d1f;
+}
+
+.app-shell { background: #f5f5f7 !important; color: #1d1d1f !important; }
+.app-shell header { background: rgba(255,255,255,.82) !important; border-color: rgba(0,0,0,.08) !important; box-shadow: 0 1px 0 rgba(0,0,0,.03); }
+.app-shell .bg-slate-950,
+.app-shell .bg-slate-950\/40,
+.app-shell .bg-slate-950\/55,
+.app-shell .bg-slate-950\/60,
+.app-shell .bg-slate-950\/70 { background-color: #f5f5f7 !important; }
+.app-shell .bg-slate-900,
+.app-shell .bg-slate-900\/40,
+.app-shell .bg-slate-900\/60,
+.app-shell .bg-slate-900\/80,
+.app-shell .bg-slate-900\/90 { background-color: rgba(255,255,255,.92) !important; }
+.app-shell .bg-slate-900\/30 { background-color: rgba(255,255,255,.72) !important; }
+.app-shell .bg-slate-800,
+.app-shell .bg-slate-800\/40,
+.app-shell .bg-slate-800\/60,
+.app-shell .bg-slate-800\/80 { background-color: #f0f0f2 !important; }
+.app-shell .border-slate-800,
+.app-shell .border-slate-800\/40,
+.app-shell .border-slate-800\/60,
+.app-shell .border-slate-800\/80,
+.app-shell .border-slate-700,
+.app-shell .border-slate-700\/80 { border-color: rgba(0,0,0,.09) !important; }
+.app-shell .text-white,
+.app-shell .text-slate-100,
+.app-shell .text-slate-200 { color: #1d1d1f !important; }
+.app-shell .text-slate-300 { color: #424245 !important; }
+.app-shell .text-slate-400 { color: #6e6e73 !important; }
+.app-shell .text-slate-500 { color: #86868b !important; }
+.app-shell [class*="from-red-"][class*="text-white"],
+.app-shell .bg-red-600.text-white,
+.app-shell .bg-red-600 > .text-white { color: #fff !important; }
+.app-shell aside,
+.app-shell section > .bg-slate-900 { box-shadow: 0 12px 35px rgba(0,0,0,.055) !important; }
+.app-shell input,
+.app-shell select { background-color: rgba(255,255,255,.9) !important; color: #1d1d1f !important; }
+.app-shell input::placeholder { color: #a1a1a6 !important; }
+.app-shell button:focus-visible,
+.app-shell input:focus-visible,
+.app-shell select:focus-visible { outline: 3px solid rgba(0,113,227,.25); outline-offset: 1px; }
+.app-shell .shadow-xl,
+.app-shell .shadow-md { box-shadow: 0 12px 40px rgba(0,0,0,.06) !important; }
+.app-shell * { scrollbar-width: thin; scrollbar-color: #c7c7cc transparent; }
+.app-shell .font-mono { font-family: inherit !important; font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+
+.dark-mode body,
+.dark-mode .app-shell { background: #0b0b0d !important; color: #f5f5f7 !important; }
+.dark-mode .app-shell header { background: rgba(20,20,22,.84) !important; border-color: rgba(255,255,255,.1) !important; }
+.dark-mode .app-shell .bg-slate-900,
+.dark-mode .app-shell .bg-slate-900\/40,
+.dark-mode .app-shell .bg-slate-900\/60,
+.dark-mode .app-shell .bg-slate-900\/80,
+.dark-mode .app-shell .bg-slate-900\/90,
+.dark-mode .app-shell .bg-white { background-color: rgba(28,28,30,.96) !important; }
+.dark-mode .app-shell .bg-slate-900\/30 { background-color: #151517 !important; }
+.dark-mode .app-shell .bg-slate-800,
+.dark-mode .app-shell .bg-slate-800\/40,
+.dark-mode .app-shell .bg-slate-800\/60,
+.dark-mode .app-shell .bg-slate-800\/80 { background-color: #2c2c2e !important; }
+.dark-mode .app-shell .bg-slate-950,
+.dark-mode .app-shell .bg-slate-950\/40,
+.dark-mode .app-shell .bg-slate-950\/55,
+.dark-mode .app-shell .bg-slate-950\/60,
+.dark-mode .app-shell .bg-slate-950\/70 { background-color: #151517 !important; }
+.dark-mode .app-shell .border-slate-800,
+.dark-mode .app-shell .border-slate-700,
+.dark-mode .app-shell [class*="border-black"] { border-color: rgba(255,255,255,.11) !important; }
+.dark-mode .app-shell .text-white,
+.dark-mode .app-shell .text-slate-100,
+.dark-mode .app-shell .text-slate-200,
+.dark-mode .app-shell .text-slate-700,
+.dark-mode .app-shell .text-slate-800,
+.dark-mode .app-shell .text-slate-900 { color: #f5f5f7 !important; }
+.dark-mode .app-shell .text-slate-300,
+.dark-mode .app-shell .text-slate-400,
+.dark-mode .app-shell .text-slate-500,
+.dark-mode .app-shell .text-slate-600 { color: #a1a1a6 !important; }
+.dark-mode .app-shell input,
+.dark-mode .app-shell select { background-color: #1c1c1e !important; color: #f5f5f7 !important; }
+.dark-mode .app-shell .bg-red-50 { background-color: #3a171a !important; }
+.dark-mode .app-shell .bg-indigo-50 { background-color: #20203f !important; }
+.dark-mode .app-shell .bg-cyan-50 { background-color: #12353a !important; }
+.dark-mode .app-shell .bg-amber-50 { background-color: #3b2d12 !important; }
+.dark-mode .app-shell .bg-purple-50 { background-color: #30203e !important; }
+.dark-mode .app-shell .bg-emerald-50 { background-color: #14362a !important; }
+.dark-mode .app-shell .text-red-700 { color: #ff8a8a !important; }
+.dark-mode .app-shell .text-indigo-700 { color: #aeb4ff !important; }
+.dark-mode .app-shell .text-cyan-700 { color: #7be5ef !important; }
+.dark-mode .app-shell .text-amber-700 { color: #ffd27a !important; }
+.dark-mode .app-shell .text-purple-700 { color: #d6a8ff !important; }
+.dark-mode .app-shell .text-emerald-700 { color: #7ee2b8 !important; }

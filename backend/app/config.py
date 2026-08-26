@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     OPTIMIZER_TIMEOUT_MS: int = 250
     BEAM_SEARCH_THRESHOLD: int = 1_000_000
     DEFAULT_WALK_MINUTES: int = 10
+    DATA_REFRESH_HOURS: int = 6
+    WALKING_REFRESH_DAYS: int = 30
+    METRICS_REFRESH_DAYS: int = 14
+    AUTO_SYNC_DEPARTMENTS: list[str] = ["CMSC", "MATH", "STAT", "ENGL", "PHYS", "BMGT", "COMM", "PSYC"]
+    UMD_BUILDINGS_URL: str = "https://services9.arcgis.com/1rOwFRpAwrxe0rBl/arcgis/rest/services/CampusMapDefault_NoInsite/FeatureServer/0/query"
 
     model_config = SettingsConfigDict(env_file=".env")
 

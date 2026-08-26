@@ -1,18 +1,32 @@
-import React from 'react';
-import type { OptimizeResponse } from '../types/schedule';
+import React, { useEffect, useState } from 'react';
+import type { OptimizeResponse, RankedSchedule } from '../types/schedule';
 import { CheckCircle2, Zap, Clock, Star, CircleCheck, ListPlus } from 'lucide-react';
 
 interface ScheduleRankingProps {
   response: OptimizeResponse | null;
-  activeIndex: number;
-  onSelectSchedule: (index: number) => void;
+  activeSchedule: RankedSchedule | null;
+  onSelectSchedule: (schedule: RankedSchedule) => void;
 }
 
 export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
   response,
-  activeIndex,
+  activeSchedule,
   onSelectSchedule,
 }) => {
+  const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'open' | 'waitlist'>('all');
+
+  const visibleSchedules = availabilityFilter === 'open'
+    ? (response?.open_schedules || [])
+    : availabilityFilter === 'waitlist'
+      ? (response?.waitlist_schedules || [])
+      : (response?.schedules || []);
+
+  useEffect(() => {
+    if (visibleSchedules.length && !visibleSchedules.some((item) => item.rank === activeSchedule?.rank)) {
+      onSelectSchedule(visibleSchedules[0]);
+    }
+  }, [availabilityFilter, response]);
+
   if (!response || response.schedules.length === 0) {
     return (
       <div className="p-4 border border-slate-800 rounded-xl bg-slate-900/40 text-center">
@@ -23,6 +37,17 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
 
   return (
     <div className="space-y-3">
+      <div className="grid grid-cols-3 gap-1 rounded-xl bg-slate-950/60 p-1">
+        {([
+          ['all', 'All', response.valid_schedules_count],
+          ['open', 'Open now', response.registerable_schedules_count],
+          ['waitlist', 'Waitlist', response.waitlist_schedules_count],
+        ] as const).map(([value, label, count]) => (
+          <button key={value} type="button" onClick={() => setAvailabilityFilter(value)} className={`rounded-lg px-2 py-2 text-[10px] font-bold ${availabilityFilter === value ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>
+            <span className="block">{label}</span><span className="font-mono text-[9px] opacity-60">{count.toLocaleString()}</span>
+          </button>
+        ))}
+      </div>
       {/* Execution Stats Banner */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-[11px] text-slate-400 font-mono">
         <div className="flex items-center gap-1">
@@ -40,15 +65,15 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
 
       {/* Schedule List */}
       <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-        {response.schedules.map((schedule, idx) => {
-          const isActive = activeIndex === idx;
+        {visibleSchedules.map((schedule, idx) => {
+          const isActive = activeSchedule?.rank === schedule.rank;
           const { metrics } = schedule;
 
           return (
             <button
               key={schedule.rank}
               type="button"
-              onClick={() => onSelectSchedule(idx)}
+              onClick={() => onSelectSchedule(schedule)}
               className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
                 isActive
                   ? 'bg-red-950/40 border-red-500/80 shadow-lg shadow-red-950/50 scale-[1.01]'
@@ -106,6 +131,7 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
             </button>
           );
         })}
+        {visibleSchedules.length === 0 && <div className="rounded-xl border border-dashed border-slate-800 p-5 text-center text-xs text-slate-500">No top-ranked schedules match this view.</div>}
       </div>
     </div>
   );

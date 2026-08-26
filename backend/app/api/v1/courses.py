@@ -9,6 +9,8 @@ from app.models.section import Section
 from app.models.meeting_time import MeetingTime
 from app.models.professor import Professor
 from app.schemas.course import CourseResponse, CourseSearchResult, SectionResponse, MeetingResponse, minutes_to_time_str
+from app.services.ingest import ensure_courses_ingested
+import re
 
 router = APIRouter()
 
@@ -25,6 +27,14 @@ async def search_courses(
     
     result = await db.execute(stmt)
     courses = result.scalars().all()
+    # Let a student paste an exact course code even when that department has
+    # never been cached on this deployment.
+    normalized = (search or '').upper().replace(' ', '')
+    if not courses and re.fullmatch(r"[A-Z]{4}\d{3}[A-Z]?", normalized):
+        await ensure_courses_ingested(term or "202608", [normalized])
+        db.expire_all()
+        result = await db.execute(stmt)
+        courses = result.scalars().all()
     return courses
 
 @router.get("/{course_id}", response_model=CourseResponse)

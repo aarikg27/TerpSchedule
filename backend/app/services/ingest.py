@@ -9,7 +9,8 @@ from sqlalchemy.future import select
 
 from app.config import settings
 from app.database import async_session_maker
-from app.models import Course, MeetingTime, Professor, Section
+from app.models import Course, MeetingTime, Professor, Section, SyncState
+from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -211,7 +212,7 @@ async def scrape_testudo_department(term_id: str, department: str) -> List[Dict[
 async def ensure_courses_ingested(term_id: str, course_ids: List[str]) -> Dict[str, int]:
     """Refresh only the departments needed by an optimization request."""
     departments = sorted({course_id[:4].upper() for course_id in course_ids if len(course_id) >= 4})
-    return await run_full_ingest(term_id, departments)
+    return await run_full_ingest(term_id, departments, include_ratings=False)
 
 
 async def fetch_professor_rating(name: str) -> Tuple[float, int]:
@@ -269,11 +270,78 @@ async def fetch_course_gpa(course_id: str, professor_name: str) -> float:
             return 3.0
 
 
+async def fetch_course_gpas(course_id: str) -> Dict[str, float]:
+    """Fetch one course once and aggregate GPA by instructor."""
+    url = f"{settings.PLANETTERP_BASE_URL}/grades"
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        try:
+            response = await client.get(url, params={"course": course_id})
+            if response.status_code != 200:
+                return {}
+            rows = response.json()
+        except Exception:
+            return {}
+
+    weights = {
+        "A+": 4.0, "A": 4.0, "A-": 3.7, "B+": 3.3, "B": 3.0, "B-": 2.7,
+        "C+": 2.3, "C": 2.0, "C-": 1.7, "D+": 1.3, "D": 1.0, "D-": 0.7, "F": 0.0,
+    }
+    totals: Dict[str, list[float]] = {}
+    for row in rows:
+        professor = row.get("professor")
+        if not professor:
+            continue
+        points = sum(float(row.get(grade, 0) or 0) * weight for grade, weight in weights.items())
+        students = sum(int(row.get(grade, 0) or 0) for grade in weights)
+        bucket = totals.setdefault(professor, [0.0, 0.0])
+        bucket[0] += points
+        bucket[1] += students
+    return {name: round(points / students, 2) for name, (points, students) in totals.items() if students}
+
+
+async def ensure_course_metrics(term_id: str, course_ids: List[str]) -> None:
+    """Populate real GPA/rating data once per course without re-scraping Testudo."""
+    async with async_session_maker() as session:
+        stale: list[str] = []
+        for course_id in course_ids:
+            state = await session.get(SyncState, f"metrics:{term_id}:{course_id}")
+            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=settings.METRICS_REFRESH_DAYS)
+            if not state or state.last_success_at < cutoff:
+                stale.append(course_id)
+    if not stale:
+        return
+
+    gpa_maps = await asyncio.gather(*(fetch_course_gpas(course_id) for course_id in stale))
+    async with async_session_maker() as session:
+        for course_id, gpas in zip(stale, gpa_maps):
+            sections = (await session.execute(select(Section).where(Section.course_id == course_id))).scalars().all()
+            instructor_names = sorted({section.instructor for section in sections if section.instructor})
+            ratings = await asyncio.gather(*(fetch_professor_rating(name) for name in instructor_names))
+            for name, (rating, reviews) in zip(instructor_names, ratings):
+                existing = await session.get(Professor, name)
+                await session.merge(Professor(
+                    name=name,
+                    slug=existing.slug if existing else _generate_slug(name),
+                    average_rating=rating,
+                    total_reviews=reviews,
+                ))
+            for section in sections:
+                section.average_gpa = gpas.get(section.instructor or "", 3.0)
+                section.gpa_is_estimated = (section.instructor or "") not in gpas
+            await session.merge(SyncState(
+                key=f"metrics:{term_id}:{course_id}",
+                last_success_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                records_updated=len(sections),
+                status="ready",
+            ))
+        await session.commit()
+
+
 def _generate_slug(name: str) -> str:
     return name.lower().replace(" ", "_")
 
 
-async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int]:
+async def run_full_ingest(term_id: str, departments: List[str], include_ratings: bool = True) -> Dict[str, int]:
     summary = {"courses": 0, "sections": 0, "professors": 0}
     professors_cache = set()
     gpa_cache: Dict[tuple[str, str], float] = {}
@@ -283,6 +351,10 @@ async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int
             courses = await scrape_testudo_department(term_id, dept)
 
             for course_data in courses:
+                if not include_ratings:
+                    await session.execute(delete(SyncState).where(
+                        SyncState.key == f"metrics:{term_id}:{course_data['course_id']}"
+                    ))
                 course = Course(
                     course_id=course_data["course_id"],
                     department=course_data["department"],
@@ -298,30 +370,32 @@ async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int
                     average_gpa = 3.0
 
                     if instructor_name and instructor_name not in professors_cache:
-                        rating, reviews = await fetch_professor_rating(instructor_name)
-                        prof_slug = _generate_slug(instructor_name)
-
-                        professor = Professor(
-                            name=instructor_name,
-                            slug=prof_slug,
-                            average_rating=rating,
-                            total_reviews=reviews,
-                        )
-                        await session.merge(professor)
+                        existing_professor = await session.get(Professor, instructor_name)
+                        if include_ratings or not existing_professor:
+                            rating, reviews = await fetch_professor_rating(instructor_name) if include_ratings else (0.0, 0)
+                            professor = Professor(
+                                name=instructor_name,
+                                slug=_generate_slug(instructor_name),
+                                average_rating=rating,
+                                total_reviews=reviews,
+                            )
+                            await session.merge(professor)
                         professors_cache.add(instructor_name)
                         summary["professors"] += 1
 
                     if instructor_name:
                         gpa_key = (course_data["course_id"], instructor_name)
-                        if gpa_key not in gpa_cache:
+                        if include_ratings and gpa_key not in gpa_cache:
                             gpa_cache[gpa_key] = await fetch_course_gpa(*gpa_key)
-                        average_gpa = gpa_cache[gpa_key]
+                        average_gpa = gpa_cache.get(gpa_key, 3.0)
 
                     stmt = select(Section).where(
                         Section.course_id == course_data["course_id"],
                         Section.section_id == section_data["section_id"],
                     )
                     existing_sec = (await session.execute(stmt)).scalar_one_or_none()
+                    if existing_sec and not include_ratings:
+                        average_gpa = existing_sec.average_gpa
 
                     section_obj = Section(
                         section_id=section_data["section_id"],
@@ -331,6 +405,7 @@ async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int
                         open_seats=section_data["open_seats"],
                         waitlist_count=section_data["waitlist_count"],
                         average_gpa=average_gpa,
+                        gpa_is_estimated=existing_sec.gpa_is_estimated if existing_sec and not include_ratings else instructor_name not in gpa_cache,
                     )
 
                     if existing_sec:
@@ -354,6 +429,14 @@ async def run_full_ingest(term_id: str, departments: List[str]) -> Dict[str, int
                             class_type=mt_data["class_type"],
                         )
                         session.add(mt)
+
+            if courses:
+                await session.merge(SyncState(
+                    key=f"soc:{term_id}:{dept}",
+                    last_success_at=datetime.now(timezone.utc).replace(tzinfo=None),
+                    records_updated=sum(len(course_data["sections"]) for course_data in courses),
+                    status="ready",
+                ))
 
         await session.commit()
 

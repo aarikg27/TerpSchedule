@@ -1,6 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from app.services.ingest import run_full_ingest
+from app.database import get_db
+from app.models import SyncState
+from app.config import settings
 
 router = APIRouter()
 
@@ -20,3 +25,20 @@ async def ingest_data(request: IngestRequest):
             detail="Testudo returned courses but no sections. Nothing was marked as synced; try again in a moment.",
         )
     return result
+
+
+@router.get("/sync-status")
+async def sync_status(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(SyncState))
+    states = result.scalars().all()
+    course_states = [state for state in states if state.key.startswith(f"soc:{settings.DEFAULT_TERM}:")]
+    walking = next((state for state in states if state.key == "walking:umd-campus-gis"), None)
+    latest_course_sync = max((state.last_success_at for state in course_states), default=None)
+    return {
+        "term": settings.DEFAULT_TERM,
+        "automatic": True,
+        "last_course_sync": latest_course_sync,
+        "departments_ready": len(course_states),
+        "walking_last_sync": walking.last_success_at if walking else None,
+        "walking_pairs": walking.records_updated if walking else 0,
+    }

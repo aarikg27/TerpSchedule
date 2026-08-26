@@ -89,6 +89,12 @@ class MeetingResult(BaseModel):
     building: str | None = None
     room: str | None = None
     class_type: str | None = None
+    next_course_id: str | None = None
+    next_building: str | None = None
+    next_room: str | None = None
+    next_start: str | None = None
+    walk_to_next_minutes: int | None = None
+    walk_to_next_meters: int | None = None
 
 class SectionResult(BaseModel):
     course_id: str
@@ -96,6 +102,7 @@ class SectionResult(BaseModel):
     instructor: str | None = None
     rating: float | None = None
     gpa: float | None = None
+    gpa_available: bool = False
     seats_total: int
     open_seats: int
     waitlist_count: int
@@ -113,3 +120,7 @@ class OptimizeResponse(BaseModel):
     valid_schedules_count: int
     execution_time_ms: float
     schedules: list[RankedSchedule]
+    registerable_schedules_count: int = 0
+    waitlist_schedules_count: int = 0
+    open_schedules: list[RankedSchedule] = []
+    waitlist_schedules: list[RankedSchedule] = []

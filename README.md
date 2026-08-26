@@ -1,140 +1,104 @@
 # TerpSchedule
 
-> **Automated Course Schedule Generator & Multi-Objective Optimization Engine for UMD Students**
+TerpSchedule helps University of Maryland students compare every conflict-free version of a semester without manually matching dozens of Testudo sections.
 
-TerpSchedule eliminates the tedious manual cross-referencing between Testudo, PlanetTerp, and campus maps. Students select target courses and configure time boundaries, blocked days, and preference weights. TerpSchedule computes all non-conflicting section combinations, scores them using a customizable multi-objective heuristic, and ranks the results on an interactive weekly dashboard with one-click iCal calendar export and CRN direct registration.
+Choose courses, set the boundaries that matter to you, and rank preferences such as instructor quality, compactness, campus days, and walking ease. TerpSchedule returns a visual calendar plus ranked alternatives and clearly distinguishes schedules that are open now from schedules containing full sections.
 
----
+## What students can do
 
-## Key Features
+- Search and combine Fall 2026 UMD courses.
+- Avoid instructors or require a particular instructor for a specific course.
+- Keep days free, choose earliest/latest class times, and limit gaps.
+- Drag schedule preferences into a clear first-through-fourth priority order.
+- Compare all results, open-only schedules, or schedules containing full/waitlist sections.
+- See lectures, discussions/recitations, labs, and online meetings separately.
+- Open any calendar block for instructor, seat, room, next-class, walking, and Google Maps details.
+- Use Light, Dark, or System appearance from the settings menu.
+- Compare instructor ratings, historical GPA, idle time, campus days, and estimated walks.
+- Copy section numbers or export a selected schedule as an `.ics` calendar.
 
-- **High-Performance Bitmask Solver**: $O(1)$ interval clash detection using 5-minute bitmask arithmetic across academic weekdays (Mon–Fri, 8:00 AM – 10:00 PM). Backtracking CSP with automatic Beam Search fallback for large combinatorial spaces.
-- **Multi-Objective Pareto-Style Scoring**:
-  - **Professor Quality**: Weighted average of PlanetTerp ratings (60%) and historical course GPAs (40%).
-  - **Compactness**: Minimizes dead time between classes during the active day.
-  - **Active Campus Days**: Balances schedule across preferred total active days per week.
-  - **Transit & Walking Effort**: Evaluates walking times between consecutive classes using campus building distance tables.
-- **Asynchronous & Online Course Support**: Safely integrates web-based and arranged asynchronous classes without false collision pruning.
-- **Interactive 3-Column Visualizer**:
-  - **Inputs & Sliders**: Course search with autocomplete, hard boundary filters, blocked day toggles, and live weight sliders.
-  - **Weekly Timetable Grid**: Color-coded class blocks with rich hover previews (instructor rating, room, time, walk buffer).
-  - **Metrics & Ranking**: Optimization radar chart (`recharts`), top alternative schedule cards, and 1-click Testudo CRN copy.
-- **iCal / `.ics` Export**: RFC 5545 compliant recurring weekly calendar export ready for Apple Calendar, Google Calendar, and Outlook.
-- **Data Ingestion**: Integrates PlanetTerp API with resilient Testudo SOC HTML parser.
-- **Seat-aware Planning**: Separates schedules that can be registered now from concepts containing full or waitlist-required sections.
-- **Meeting Type Visibility**: Labels and filters lectures, discussions/recitations, labs, online meetings, and other formats.
+Seat counts are planning information, not a registration guarantee. Always confirm final availability and waitlist eligibility in Testudo.
 
-See [DATA_SOURCES.md](DATA_SOURCES.md) for live-vs-approximate data details and the free walking-time implementation path.
+## Data freshness
 
----
+Students do not need to press a sync button. The backend automatically:
 
-## Tech Stack
+- refreshes supported Testudo departments every six hours;
+- refreshes UMD Campus GIS building coordinates every 30 days;
+- keeps the previous cache when an upstream service is unavailable; and
+- repairs missing course data when a student requests it.
 
-- **Backend**: Python 3.12, FastAPI, SQLAlchemy 2.0 (Async), `aiosqlite` (SQLite v1 / Postgres ready), `httpx`, `beautifulsoup4`, `icalendar`, `pydantic v2`
-- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, `recharts`, `lucide-react`
-- **Testing**: `pytest`, `pytest-asyncio`, `httpx` ASGI test client
+The header shows whether cached data is ready and when it was last refreshed.
 
----
+## Run locally
 
-## Quick Start (Local Development)
+Requirements: Python 3.11+, Node.js 20+, and npm.
 
-### 1. Backend Setup
+### Backend
 
 ```bash
 cd backend
-
-# Create virtual environment with uv or python venv
-uv venv .venv --python 3.12
-# Activate virtualenv:
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-
-# Install dependencies
-uv pip install fastapi "uvicorn[standard]" "sqlalchemy[asyncio]" aiosqlite httpx beautifulsoup4 icalendar pydantic-settings cachetools pytz pytest pytest-asyncio
-
-# Seed initial campus building walking distances
-python seed_buildings.py
-
-# Run FastAPI backend
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e ".[dev]"
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-Backend API will be live at `http://localhost:8000`. Interactive Swagger docs are available at `http://localhost:8000/docs`.
+On macOS/Linux, activate with `source .venv/bin/activate`.
 
-### 2. Frontend Setup
+### Frontend
 
 ```bash
 cd frontend
-
-# Install packages
 npm install
-
-# Start Vite dev server
 npm run dev
 ```
 
-Frontend dashboard will be running at `http://localhost:5173`.
+Open `http://localhost:5173`.
 
----
-
-## Running the Automated Test Suite
-
-Run the full pytest suite covering bitmask interval math, CSP solver constraints, multi-objective scoring, and API integration flows:
-
-```bash
-cd backend
-python -m pytest tests/ -v
-```
-
----
-
-## Docker Deployment
-
-To launch the complete stack with a single command:
+## Run with Docker
 
 ```bash
 docker compose up --build
 ```
 
-- Frontend: `http://localhost:3000`
-- Backend API: `http://localhost:8000`
+- App: `http://localhost:3000`
+- API documentation: `http://localhost:8000/docs`
 
----
+The Docker volume preserves the SQLite cache between restarts.
 
-## API Specification Overview
+## Configuration
 
-### `POST /api/v1/optimize`
-Computes and scores optimal non-conflicting schedules.
+Backend settings can be supplied in `backend/.env` or as environment variables.
 
-**Request:**
-```json
-{
-  "courses": ["CMSC132", "MATH240"],
-  "constraints": {
-    "earliest_start_time": 480,
-    "latest_end_time": 1200,
-    "blocked_days": ["F"],
-    "max_gap_minutes": 120,
-    "avoid_professors": [],
-    "target_campus_days": 4
-  },
-  "weights": {
-    "professor_quality": 0.40,
-    "compactness": 0.30,
-    "campus_days": 0.15,
-    "transit_ease": 0.15
-  }
-}
+| Setting | Default | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./terpschedule.db` | Persistent database connection |
+| `DEFAULT_TERM` | `202608` | Supported Testudo term |
+| `DATA_REFRESH_HOURS` | `6` | Course and seat refresh interval |
+| `WALKING_REFRESH_DAYS` | `30` | Campus coordinate refresh interval |
+| `METRICS_REFRESH_DAYS` | `14` | PlanetTerp rating/GPA refresh interval |
+| `OPTIMIZER_TIMEOUT_MS` | `250` | Exact-search time budget |
+| `CORS_ORIGINS` | `http://localhost:5173` | Allowed frontend origins |
+
+For a public deployment, use a persistent database/volume and set `CORS_ORIGINS` to the real frontend URL.
+
+## Tests
+
+```bash
+cd backend
+python -m pytest -q
+
+cd ../frontend
+npm run build
 ```
 
-### `GET /api/v1/export/ical`
-Returns `.ics` calendar payload for selected section identifiers (e.g. `?sections=CMSC132-0101,MATH240-0201`).
+## Data sources and limitations
 
-### `POST /api/v1/ingest`
-Triggers Testudo scraping and PlanetTerp synchronization for specified departments and term.
+See [DATA_SOURCES.md](DATA_SOURCES.md) for what is live, estimated, cached, or unavailable. See [PUBLISHING.md](PUBLISHING.md) before making a public deployment.
 
----
+TerpSchedule is an independent student project and is not affiliated with or endorsed by the University of Maryland.
 
 ## License
 
-MIT License. Designed for University of Maryland students.
+MIT

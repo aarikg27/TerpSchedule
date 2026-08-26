@@ -40,3 +40,18 @@ export async function triggerIngest(term: string, departments: string[]): Promis
   }
   return res.json();
 }
+
+export interface SyncStatus {
+  term: string;
+  automatic: boolean;
+  last_course_sync: string | null;
+  departments_ready: number;
+  walking_last_sync: string | null;
+  walking_pairs: number;
+}
+
+export async function getSyncStatus(): Promise<SyncStatus> {
+  const res = await fetch(`${API_BASE}/sync-status`);
+  if (!res.ok) throw new Error('Could not read sync status');
+  return res.json();
+}

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SlidersHorizontal, Clock, CalendarOff, Hourglass, UserX, UserCheck, X, CircleDollarSign } from 'lucide-react';
+import { SlidersHorizontal, Clock, CalendarOff, Hourglass, UserX, UserCheck, X } from 'lucide-react';
 import type { Constraints } from '../types/schedule';
 
 interface ConstraintPanelProps {
@@ -149,20 +149,6 @@ export const ConstraintPanel: React.FC<ConstraintPanelProps> = ({
             ))}
           </select>
         </div>
-      </div>
-
-      <div>
-        <label className="text-[11px] font-medium text-slate-400 mb-1.5 flex items-center gap-1">
-          <CircleDollarSign className="w-3 h-3 text-emerald-400" /> Seat availability
-        </label>
-        <div className="grid grid-cols-3 gap-1">
-          {[
-            ['all', 'All ideas'], ['open_only', 'Register now'], ['waitlist_only', 'Needs waitlist'],
-          ].map(([value, label]) => (
-            <button key={value} type="button" onClick={() => onChange({ ...constraints, availability: value as Constraints['availability'] })} className={`rounded-md border px-1 py-1.5 text-[10px] font-semibold ${constraints.availability === value ? 'border-emerald-500 bg-emerald-950/60 text-emerald-200' : 'border-slate-800 bg-slate-900 text-slate-500'}`}>{label}</button>
-          ))}
-        </div>
-        <p className="mt-1 text-[10px] leading-relaxed text-slate-600">“Needs waitlist” includes closed sections; confirm availability in Testudo.</p>
       </div>
 
       {/* Excluded / Blocked Days */}

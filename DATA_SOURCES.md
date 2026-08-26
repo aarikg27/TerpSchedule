@@ -1,24 +1,46 @@
-# TerpSchedule data transparency
+# Data sources and transparency
 
-## Live data
+TerpSchedule combines public data from several sources. This page explains what students should trust, what is estimated, and what the app cannot know.
 
-- Course, section, meeting type, instructor, room, and seat counts come from the public Testudo Schedule of Classes pages when **Sync SOC** runs.
-- Instructor ratings and course-specific historical GPA come from PlanetTerp. Missing values fall back to neutral defaults (3.0/5 rating and 3.0/4 GPA) so unrated instructors are not unfairly ranked last.
+## Testudo Schedule of Classes
 
-## Approximate data
+Used for course names, sections, instructors, meeting days/times, rooms, meeting types, seat totals, open seats, and displayed waitlist counts.
 
-- Walking times in `backend/seed_buildings.py` are a small approximate lookup table.
-- A building pair absent from that table currently uses `DEFAULT_WALK_MINUTES` (10 minutes).
-- “Needs waitlist” means Testudo reports zero open seats. It can also mean the section is closed; students must confirm whether its waitlist is accepting names in Testudo.
+The backend refreshes supported departments every six hours and keeps its previous cache during outages. Seat counts can change after a refresh and never guarantee successful registration.
 
-## Free walking-time upgrade
+Source: [UMD Schedule of Classes](https://app.testudo.umd.edu/soc/)
 
-A no-paid-API implementation can use OpenStreetMap data:
+## PlanetTerp
 
-1. Build a one-time table mapping UMD building codes to latitude/longitude. Resolve and manually verify each building once; do not geocode on every schedule request.
-2. Cache those coordinates in the database and include attribution for OpenStreetMap contributors.
-3. For a small deployment, request pedestrian routes from a responsibly used public routing service and permanently cache every building pair. Respect that service's published rate and usage limits.
-4. For a durable deployment, self-host an open-source pedestrian router such as Valhalla, GraphHopper, or OSRM using the Maryland OpenStreetMap extract. This has no per-request fee, but it does use your server's CPU, RAM, and storage.
-5. Store the route duration and distance with a `source` and `updated_at` field. Show “estimated” in the UI and keep a straight-line walking fallback for missing routes.
+Used for instructor ratings and course-specific historical GPA. Coverage is incomplete, especially for new instructors. Missing values use neutral defaults rather than being treated as poor performance.
 
-The best low-cost first version is a one-time script that computes and caches the few hundred building pairs students actually encounter. Schedule generation should only read cached values; it should never depend on a routing service being online.
+Source: [PlanetTerp](https://planetterp.com/)
+
+## UMD Campus GIS and walking estimates
+
+Building codes and coordinates come from the official [UMD Campus Web Map](https://maps.umd.edu/), which is maintained using the university's Campus GIS services.
+
+TerpSchedule converts the straight-line distance between official building centroids into a conservative pedestrian estimate:
+
+- distance is multiplied by `1.28` to account for paths and entrances;
+- walking speed is estimated at 78 meters per minute; and
+- results are rounded up and cached for every known building pair.
+
+Coordinates refresh every 30 days. These are planning estimates, not accessible-route guarantees or live navigation. The app uses a 10-minute fallback when Testudo reports an unknown building code.
+
+The cache structure supports replacing estimates with exact pedestrian routes later without changing schedule generation.
+
+## Availability language
+
+- **Open now**: every selected section currently reports at least one open seat.
+- **Waitlist/closed**: at least one selected section reports zero open seats.
+
+The public data cannot always determine whether a waitlist is accepting additional students. Confirm the final status in Testudo.
+
+## Semester support
+
+The public interface intentionally supports Fall 2026 only. Although older Testudo pages may remain accessible, the current database keys are not term-aware. Exposing multiple terms before that migration could mix sections from different semesters.
+
+## Independence
+
+TerpSchedule is an independent student project. It is not affiliated with or endorsed by the University of Maryland, Testudo, or PlanetTerp.

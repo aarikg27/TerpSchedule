@@ -21,6 +21,7 @@ class SolverSection:
     instructor: str | None = None
     avg_rating: float = 3.0
     avg_gpa: float = 3.0
+    gpa_is_estimated: bool = True
     seats_total: int = 0
     open_seats: int = 0
     waitlist_count: int = 0

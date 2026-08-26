@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { RankedSchedule, Section, Meeting } from '../types/schedule';
-import { Star, MapPin, Clock, Footprints, Laptop, User, FlaskConical, Users, Presentation } from 'lucide-react';
+import { Star, MapPin, Clock, Footprints, Laptop, User, FlaskConical, Users, Presentation, X, ExternalLink, Navigation } from 'lucide-react';
 
 interface CalendarGridProps {
   schedule: RankedSchedule | null;
@@ -37,13 +37,13 @@ const TIME_LABELS = [
 ];
 
 const COURSE_COLORS: Record<string, { bg: string; border: string; text: string; badge: string }> = {
-  CMSC: { bg: 'bg-red-950/80', border: 'border-red-600/80', text: 'text-red-200', badge: 'bg-red-900/60 text-red-300' },
-  MATH: { bg: 'bg-indigo-950/80', border: 'border-indigo-600/80', text: 'text-indigo-200', badge: 'bg-indigo-900/60 text-indigo-300' },
-  STAT: { bg: 'bg-cyan-950/80', border: 'border-cyan-600/80', text: 'text-cyan-200', badge: 'bg-cyan-900/60 text-cyan-300' },
-  ENGL: { bg: 'bg-amber-950/80', border: 'border-amber-600/80', text: 'text-amber-200', badge: 'bg-amber-900/60 text-amber-300' },
-  PHYS: { bg: 'bg-purple-950/80', border: 'border-purple-600/80', text: 'text-purple-200', badge: 'bg-purple-900/60 text-purple-300' },
-  BMGT: { bg: 'bg-emerald-950/80', border: 'border-emerald-600/80', text: 'text-emerald-200', badge: 'bg-emerald-900/60 text-emerald-300' },
-  DEFAULT: { bg: 'bg-slate-850', border: 'border-slate-600', text: 'text-slate-200', badge: 'bg-slate-800 text-slate-300' },
+  CMSC: { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700', badge: 'bg-red-50 text-red-700' },
+  MATH: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-700', badge: 'bg-indigo-50 text-indigo-700' },
+  STAT: { bg: 'bg-cyan-50', border: 'border-cyan-200', text: 'text-cyan-700', badge: 'bg-cyan-50 text-cyan-700' },
+  ENGL: { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700', badge: 'bg-amber-50 text-amber-700' },
+  PHYS: { bg: 'bg-purple-50', border: 'border-purple-200', text: 'text-purple-700', badge: 'bg-purple-50 text-purple-700' },
+  BMGT: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-700', badge: 'bg-emerald-50 text-emerald-700' },
+  DEFAULT: { bg: 'bg-slate-50', border: 'border-slate-200', text: 'text-slate-700', badge: 'bg-slate-50 text-slate-700' },
 };
 
 function parseTimeToMin(timeStr: string): number {
@@ -74,6 +74,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
     meeting: Meeting;
     nextMeeting?: Meeting;
   } | null>(null);
+  const [selectedSection, setSelectedSection] = useState<{ section: Section; meeting: Meeting } | null>(null);
 
   if (!schedule) {
     return (
@@ -213,6 +214,11 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
                         key={`${section.course_id}-${section.section_id}-${meeting.start}`}
                         onMouseEnter={() => setHoveredSection({ section, meeting, nextMeeting })}
                         onMouseLeave={() => setHoveredSection(null)}
+                        onClick={() => setSelectedSection({ section, meeting })}
+                        onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') setSelectedSection({ section, meeting }); }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`View ${section.course_id} section ${section.section_id} details`}
                         className={`absolute inset-x-1 rounded-md border p-1.5 text-left transition-all cursor-pointer shadow-md overflow-hidden ${colors.bg} ${colors.border} hover:scale-[1.02] hover:z-20`}
                         style={{ top: `${topPct}%`, height: `${heightPct}%` }}
                       >
@@ -250,7 +256,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
       {hoveredSection && (
         <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-2xl flex flex-wrap items-center justify-between gap-4 text-xs">
           <div className="flex items-center gap-3">
-            <div className="px-2.5 py-1 rounded-lg bg-red-950/80 border border-red-800 text-red-200 font-mono font-bold">
+            <div className={`px-2.5 py-1 rounded-lg border font-mono font-bold ${getCourseColor(hoveredSection.section.course_id).bg} ${getCourseColor(hoveredSection.section.course_id).border} ${getCourseColor(hoveredSection.section.course_id).text}`}>
               {hoveredSection.section.course_id}-{hoveredSection.section.section_id}
             </div>
             <div>
@@ -269,26 +275,67 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
 
           <div className="flex items-center gap-3">
             {/* PlanetTerp rating */}
-            <div className="flex items-center gap-1 bg-amber-950/40 border border-amber-800/60 px-2 py-1 rounded-md text-amber-300 font-semibold font-mono">
+            <div className={`flex items-center gap-1 border px-2 py-1 rounded-md font-semibold font-mono ${getCourseColor(hoveredSection.section.course_id).badge} ${getCourseColor(hoveredSection.section.course_id).border}`}>
               <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
               <span>{hoveredSection.section.rating ? hoveredSection.section.rating.toFixed(1) : '3.0'} / 5.0</span>
             </div>
 
             {/* GPA */}
             <div className="bg-slate-800 border border-slate-700 px-2 py-1 rounded-md text-slate-200 font-mono font-semibold">
-              GPA: {hoveredSection.section.gpa ? hoveredSection.section.gpa.toFixed(2) : '3.00'}
+              GPA: {hoveredSection.section.gpa_available && hoveredSection.section.gpa != null ? hoveredSection.section.gpa.toFixed(2) : 'No data'}
             </div>
 
             {/* Walk buffer if next meeting exists */}
-            {hoveredSection.nextMeeting && hoveredSection.nextMeeting.building && (
+            {hoveredSection.meeting.next_building && (
               <div className="flex items-center gap-1 text-slate-400 font-mono">
                 <Footprints className="w-3 h-3 text-purple-400" />
-                <span>Next: {hoveredSection.nextMeeting.building}</span>
+                <span>Next: {hoveredSection.meeting.next_course_id} · {hoveredSection.meeting.next_building}</span>
+                {hoveredSection.meeting.walk_to_next_minutes != null && <strong className="text-slate-700">· {hoveredSection.meeting.walk_to_next_minutes} min walk</strong>}
               </div>
             )}
           </div>
         </div>
       )}
+
+      {selectedSection && (() => {
+        const { section, meeting } = selectedSection;
+        const colors = getCourseColor(section.course_id);
+        const mapsUrl = meeting.building && meeting.next_building
+          ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(`${meeting.building}, University of Maryland, College Park`)}&destination=${encodeURIComponent(`${meeting.next_building}, University of Maryland, College Park`)}&travelmode=walking`
+          : null;
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedSection(null); }}>
+            <div role="dialog" aria-modal="true" aria-label={`${section.course_id} section details`} className="w-full max-w-lg overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-2xl">
+              <div className={`border-b p-6 ${colors.bg} ${colors.border}`}>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className={`text-xs font-semibold uppercase tracking-[.16em] ${colors.text}`}>{normalizeMeetingType(meeting.class_type)} · Section {section.section_id}</div>
+                    <h2 className={`mt-1 text-3xl font-semibold tracking-tight ${colors.text}`}>{section.course_id}</h2>
+                  </div>
+                  <button type="button" aria-label="Close details" onClick={() => setSelectedSection(null)} className="rounded-full bg-white/80 p-2 text-slate-700 shadow-sm"><X className="w-4 h-4" /></button>
+                </div>
+              </div>
+              <div className="space-y-5 p-6">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-slate-50 p-4"><div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Instructor</div><div className="mt-1 text-sm font-semibold text-slate-800">{section.instructor || 'TBA'}</div><div className="mt-1 text-xs text-slate-500">{section.rating ? section.rating.toFixed(1) : 'No'} rating · {section.gpa_available && section.gpa != null ? `${section.gpa.toFixed(2)} GPA` : 'No GPA data'}</div></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Meeting</div><div className="mt-1 text-sm font-semibold text-slate-800">{meeting.start}–{meeting.end}</div><div className="mt-1 text-xs text-slate-500">{meeting.building || 'TBA'} {meeting.room || ''}</div></div>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl border border-black/8 p-4">
+                  <div><div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Seats</div><div className={`mt-1 text-sm font-semibold ${section.open_seats > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>{section.open_seats > 0 ? `${section.open_seats} of ${section.seats_total} open` : 'Waitlist or closed'}</div></div>
+                  <div className="text-right text-xs text-slate-500">Waitlist count<br/><strong className="text-slate-800">{section.waitlist_count}</strong></div>
+                </div>
+                {meeting.next_building ? (
+                  <div className="rounded-2xl bg-blue-50 p-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-blue-900"><Navigation className="w-4 h-4" /> Next: {meeting.next_course_id} in {meeting.next_building} {meeting.next_room || ''}</div>
+                    <div className="mt-1 text-xs text-blue-700">Starts at {meeting.next_start} · about {meeting.walk_to_next_minutes ?? '—'} minutes ({meeting.walk_to_next_meters ? `${meeting.walk_to_next_meters} m` : 'distance unavailable'})</div>
+                    {mapsUrl && <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500">Open walking directions in Google Maps <ExternalLink className="w-3 h-3" /></a>}
+                  </div>
+                ) : <div className="rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">No class follows this meeting on the same day.</div>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
