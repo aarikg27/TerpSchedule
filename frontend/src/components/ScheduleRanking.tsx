@@ -78,6 +78,9 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
         {visibleSchedules.map((schedule, idx) => {
           const isActive = activeSchedule?.rank === schedule.rank;
           const { metrics } = schedule;
+          const totalCredits = metrics.total_credits ?? schedule.sections.reduce((total, section) => total + (section.credits || 0), 0);
+          const gpaCoverage = metrics.gpa_sections_with_data ?? schedule.sections.filter((section) => section.gpa_available).length;
+          const gpaTotal = metrics.gpa_sections_total ?? schedule.sections.length;
 
           return (
             <button
@@ -122,13 +125,16 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
               </div>
 
               {/* Quick Metrics */}
-              <div className="grid grid-cols-3 gap-1 text-[10px] font-mono text-slate-400 mt-2">
+              <div className="grid grid-cols-4 gap-1 text-[10px] font-mono text-slate-400 mt-2">
                 <div className="bg-slate-950/60 px-1.5 py-0.5 rounded flex items-center gap-1 truncate">
                   <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0" />
                   <span>{metrics.avg_professor_rating.toFixed(1)} ★</span>
                 </div>
                 <div className="bg-slate-950/60 px-1.5 py-0.5 rounded text-center truncate">
-                  GPA: <span className="text-slate-200">{metrics.avg_gpa.toFixed(2)}</span>
+                  GPA: <span className="text-slate-200">{metrics.avg_gpa == null ? 'No data' : `${metrics.avg_gpa.toFixed(2)} (${gpaCoverage}/${gpaTotal})`}</span>
+                </div>
+                <div className="bg-slate-950/60 px-1.5 py-0.5 rounded text-center truncate" title={`${gpaCoverage} of ${gpaTotal} courses have GPA data`}>
+                  <span className="text-slate-200">{totalCredits || '—'}</span> cr
                 </div>
                 <div className="bg-slate-950/60 px-1.5 py-0.5 rounded text-right truncate">
                   Gap: <span className="text-slate-200">{metrics.total_gap_minutes}m</span>

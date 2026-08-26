@@ -26,6 +26,7 @@ export interface Section {
   rating?: number | null;
   gpa?: number | null;
   gpa_available: boolean;
+  credits: number;
   seats_total: number;
   open_seats: number;
   waitlist_count: number;
@@ -35,7 +36,10 @@ export interface Section {
 
 export interface ScheduleMetrics {
   avg_professor_rating: number;
-  avg_gpa: number;
+  avg_gpa: number | null;
+  gpa_sections_with_data: number;
+  gpa_sections_total: number;
+  total_credits: number;
   total_gap_minutes: number;
   active_days: number;
   max_walk_time_mins: number;

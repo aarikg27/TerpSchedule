@@ -112,7 +112,8 @@ def compute_total_score(
     ) / total_weight * 100
     
     avg_rating = sum(s.avg_rating for s in schedule) / len(schedule) if schedule else 0.0
-    avg_gpa = sum(s.avg_gpa for s in schedule) / len(schedule) if schedule else 0.0
+    gpas_with_data = [s.avg_gpa for s in schedule if not s.gpa_is_estimated]
+    avg_gpa = sum(gpas_with_data) / len(gpas_with_data) if gpas_with_data else None
     
     total_gap = 0
     max_walk = 0
@@ -145,7 +146,10 @@ def compute_total_score(
                     
     metrics = {
         'avg_professor_rating': round(avg_rating, 2),
-        'avg_gpa': round(avg_gpa, 2),
+        'avg_gpa': round(avg_gpa, 2) if avg_gpa is not None else None,
+        'gpa_sections_with_data': len(gpas_with_data),
+        'gpa_sections_total': len(schedule),
+        'total_credits': sum(section.credits for section in schedule),
         'total_gap_minutes': total_gap,
         'active_days': len(active_days_set),
         'max_walk_time_mins': max_walk,

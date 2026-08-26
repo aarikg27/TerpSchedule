@@ -114,6 +114,23 @@ def test_total_score_range():
     assert "avg_gpa" in metrics
 
 
+def test_displayed_gpa_excludes_fallbacks_and_credits_are_totaled():
+    schedule = [
+        SolverSection("S1", "C1", avg_gpa=3.6, gpa_is_estimated=False, credits=4),
+        SolverSection("S2", "C2", avg_gpa=3.0, gpa_is_estimated=True, credits=3),
+    ]
+    _, metrics = compute_total_score(
+        schedule=schedule,
+        weights={"professor_quality": 1.0},
+        target_campus_days=3,
+        building_distances={},
+    )
+    assert metrics["avg_gpa"] == 3.6
+    assert metrics["gpa_sections_with_data"] == 1
+    assert metrics["gpa_sections_total"] == 2
+    assert metrics["total_credits"] == 7
+
+
 def test_empty_schedule():
     sched = build_test_schedule([])
     weights = {

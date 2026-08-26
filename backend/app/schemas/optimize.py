@@ -74,7 +74,10 @@ class OptimizeRequest(BaseModel):
 
 class ScheduleMetrics(BaseModel):
     avg_professor_rating: float
-    avg_gpa: float
+    avg_gpa: float | None
+    gpa_sections_with_data: int
+    gpa_sections_total: int
+    total_credits: int
     total_gap_minutes: int
     active_days: int
     max_walk_time_mins: int
@@ -109,6 +112,7 @@ class SectionResult(BaseModel):
     rating: float | None = None
     gpa: float | None = None
     gpa_available: bool = False
+    credits: int
     seats_total: int
     open_seats: int
     waitlist_count: int

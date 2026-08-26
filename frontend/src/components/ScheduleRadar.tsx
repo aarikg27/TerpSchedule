@@ -28,7 +28,7 @@ export const ScheduleRadar: React.FC<ScheduleRadarProps> = ({ schedule }) => {
     100,
     Math.round(
       (0.6 * (metrics.avg_professor_rating / 5.0) +
-        0.4 * (metrics.avg_gpa / 4.0)) *
+        0.4 * ((metrics.avg_gpa ?? 3.0) / 4.0)) *
         100
     )
   );

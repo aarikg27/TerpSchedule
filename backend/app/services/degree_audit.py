@@ -106,6 +106,12 @@ def parse_degree_audit(payload: bytes) -> dict:
             requirement.status = "complete"
             requirement.credits_needed = None
             requirement.courses_needed = None
+            if requirement.name == "Math Requirement":
+                requirement.name = "Calculus I & II"
+                requirement.note = "MATH140 and MATH141 requirement completed."
+            else:
+                requirement.name = "Additional approved MATH course"
+                requirement.note = "The additional mathematics requirement is completed."
         elif requirement.name == "Complete 5 courses at 400 level from at least 3 areas":
             requirement.status = "remaining"
             requirement.courses_needed = 5
