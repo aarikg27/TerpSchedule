@@ -116,7 +116,24 @@ body {
 .dark-mode .app-shell .bg-blue-50 { background-color: #16263a !important; }
 .dark-mode .app-shell .course-details-modal { background-color: #1c1c1e !important; color: #f5f5f7 !important; }
 .dark-mode .app-shell .legal-dialog { background-color: #1c1c1e !important; color: #f5f5f7 !important; }
-.dark-mode .app-shell .auth-dialog { background-color: #1c1c1e !important; color: #f5f5f7 !important; }
+.dark-mode .app-shell .auth-dialog,
+.dark-mode .auth-dialog,
+.dark-mode .audit-dialog { background-color: #1c1c1e !important; color: #f5f5f7 !important; border-color: rgba(255,255,255,.1) !important; }
+.dark-mode .auth-dialog .text-slate-900,
+.dark-mode .audit-dialog .text-slate-900,
+.dark-mode .audit-dialog .text-slate-800 { color: #f5f5f7 !important; }
+.dark-mode .auth-dialog .text-slate-500,
+.dark-mode .auth-dialog .text-slate-600,
+.dark-mode .audit-dialog .text-slate-500 { color: #a1a1a6 !important; }
+.dark-mode .auth-dialog input { background: #2c2c2e !important; color: #f5f5f7 !important; border-color: rgba(255,255,255,.12) !important; }
+.dark-mode .auth-dialog .bg-white,
+.dark-mode .audit-dialog .bg-white { background-color: #242426 !important; border-color: rgba(255,255,255,.1) !important; }
+.dark-mode .audit-dialog .bg-slate-50 { background-color: #242426 !important; }
+.schedule-card-active { background: #fff7f7; }
+.dark-mode .schedule-card-active { background: #2b1b1d !important; border-color: #ff5a62 !important; }
+.dark-mode .schedule-card { background: #1c1c1e !important; border-color: rgba(255,255,255,.1) !important; }
+.search-diagnostics { color: #6e6e73 !important; }
+.dark-mode .search-diagnostics { background: #1c1c1e !important; border-color: rgba(255,255,255,.1) !important; color: #a1a1a6 !important; }
 .dark-mode .app-shell .auth-dialog .text-slate-900 { color: #f5f5f7 !important; }
 .dark-mode .app-shell .legal-dialog .text-slate-900 { color: #f5f5f7 !important; }
 .dark-mode .app-shell .legal-dialog .text-slate-600 { color: #b6b6ba !important; }

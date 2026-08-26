@@ -62,7 +62,7 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
           <span>{response.execution_time_ms.toFixed(1)}ms</span>
         </div>
       </div>
-      <details className="rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-[10px] leading-relaxed text-slate-400">
+      <details className="search-diagnostics rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
         <summary className="cursor-pointer font-semibold text-slate-200">How this search was counted</summary>
         <div className="mt-2 space-y-1">
           <p>{Object.entries(response.section_options_by_course || {}).map(([course, count]) => `${course}: ${count} sections`).join(' · ')}</p>
@@ -86,8 +86,8 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
               onClick={() => onSelectSchedule(schedule)}
               className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
                 isActive
-                  ? 'bg-red-950/40 border-red-500/80 shadow-lg shadow-red-950/50 scale-[1.01]'
-                  : 'bg-slate-900/90 border-slate-800 hover:border-slate-700 hover:bg-slate-850'
+                  ? 'schedule-card-active border-red-500 shadow-md scale-[1.01]'
+                  : 'schedule-card border-slate-200 bg-white hover:border-slate-300'
               }`}
             >
               <div className="flex items-center justify-between mb-1.5">

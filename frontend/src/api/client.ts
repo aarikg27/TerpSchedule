@@ -68,8 +68,9 @@ export async function getSyncStatus(): Promise<SyncStatus> {
   return res.json();
 }
 
-export interface AuditRequirement { name: string; status: 'complete' | 'remaining'; credits_needed: number | null; courses_needed: number | null; courses_mentioned: string[] }
-export interface AuditSummary { completed_credits: number | null; courses_found: string[]; in_progress_courses: string[]; requirements: AuditRequirement[]; remaining_requirement_count: number; disclaimer: string }
+export interface AuditRequirement { name: string; status: 'complete' | 'remaining'; credits_needed: number | null; courses_needed: number | null; courses_mentioned: string[]; category?: string | null; code?: string | null; is_group?: boolean; group?: string | null }
+export interface AuditCourseRecord { term: string; course_id: string; credits: number; grade: string; status: 'completed' | 'in_progress' }
+export interface AuditSummary { completed_credits: number | null; total_credits_required?: number | null; in_progress_credits?: number | null; credits_remaining?: number | null; credits_remaining_after_in_progress?: number | null; courses_found: string[]; in_progress_courses: string[]; completed_courses?: string[]; course_records?: AuditCourseRecord[]; requirements: AuditRequirement[]; gen_ed_requirements?: AuditRequirement[]; remaining_requirement_count: number; disclaimer: string }
 export async function parseDegreeAudit(file: File): Promise<AuditSummary> {
   const body = new FormData(); body.append('file', file);
   const res = await fetch(`${API_BASE}/degree-audit/parse`, { method: 'POST', body });

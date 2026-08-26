@@ -21,7 +21,8 @@ export async function loadCloudSchedules(): Promise<SavedScheduleRecord[]> {
 
 export async function saveCloudSchedule(record: Omit<SavedScheduleRecord, 'created_at' | 'updated_at'>): Promise<void> {
   if (!neonClient) return;
-  const { error } = await neonClient.from('user_saved_schedules').insert(record);
+  const now = new Date().toISOString();
+  const { error } = await neonClient.from('user_saved_schedules').insert({ ...record, created_at: now, updated_at: now });
   if (error) throw new Error(error.message);
 }
 
@@ -40,7 +41,7 @@ export async function loadPlannerState(): Promise<Record<string, unknown> | null
 
 export async function savePlannerState(userId: string, state: Record<string, unknown>): Promise<void> {
   if (!neonClient) return;
-  const { error } = await neonClient.from('user_planner_states').upsert({ id: userId, user_id: userId, state }, { onConflict: 'user_id' });
+  const { error } = await neonClient.from('user_planner_states').upsert({ id: userId, user_id: userId, state, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   if (error) throw new Error(error.message);
 }
 
@@ -54,7 +55,7 @@ export async function loadAuditSummary(): Promise<StoredAuditSummary | null> {
 
 export async function saveAuditSummary(userId: string, summary: AuditSummary, sourceDate: string): Promise<void> {
   if (!neonClient) return;
-  const { error } = await neonClient.from('user_audit_summaries').upsert({ id: userId, user_id: userId, summary, source_date: sourceDate }, { onConflict: 'user_id' });
+  const { error } = await neonClient.from('user_audit_summaries').upsert({ id: userId, user_id: userId, summary, source_date: sourceDate, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
   if (error) throw new Error(error.message);
 }
 

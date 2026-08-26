@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime
 
-from sqlalchemy import DateTime, JSON, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, JSON, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -13,8 +13,8 @@ class UserSavedSchedule(Base):
     name: Mapped[str] = mapped_column(String(120))
     term: Mapped[str] = mapped_column(String(6), index=True)
     schedule: Mapped[dict] = mapped_column(JSON)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class UserPlannerState(Base):
@@ -22,7 +22,7 @@ class UserPlannerState(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(100), index=True, unique=True)
     state: Mapped[dict] = mapped_column(JSON)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
 class UserAuditSummary(Base):
@@ -31,4 +31,4 @@ class UserAuditSummary(Base):
     user_id: Mapped[str] = mapped_column(String(100), index=True, unique=True)
     summary: Mapped[dict] = mapped_column(JSON)
     source_date: Mapped[str | None] = mapped_column(String(40), nullable=True)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

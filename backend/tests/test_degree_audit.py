@@ -28,4 +28,5 @@ def test_parse_degree_audit_extracts_generic_requirements_without_ai():
     assert result["completed_credits"] == 53
     assert result["remaining_requirement_count"] == 1
     assert result["in_progress_courses"] == ["CMSC132"]
+    assert result["course_records"][0]["status"] == "in_progress"
     assert "CMSC420" in result["courses_found"]

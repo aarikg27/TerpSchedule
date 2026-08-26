@@ -7,31 +7,45 @@ import { deleteCloudSchedule, loadCloudSchedules, saveCloudSchedule } from '../a
 
 type SavedSchedule = { id: string; name: string; term: string; savedAt: string; schedule: RankedSchedule };
 
-const storageKey = 'terpschedule-saved-schedules-v1';
+const legacyStorageKey = 'terpschedule-saved-schedules-v1';
 
-function readSaved(): SavedSchedule[] {
-  try { return JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch { return []; }
+function readSaved(key: string): SavedSchedule[] {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
 }
 
 interface Props { schedule: RankedSchedule | null; term: string; onSelect: (schedule: RankedSchedule) => void }
 
 export const ScheduleActions: React.FC<Props> = ({ schedule, term, onSelect }) => {
-  const [saved, setSaved] = useState<SavedSchedule[]>(readSaved);
+  const [saved, setSaved] = useState<SavedSchedule[]>(() => readSaved(legacyStorageKey));
   const [copied, setCopied] = useState(false);
   const [checking, setChecking] = useState(false);
   const [notice, setNotice] = useState('');
+  const [cloudSynced, setCloudSynced] = useState(false);
   const session = authClient?.useSession();
   const user = session?.data?.user;
+  const storageKey = `terpschedule-saved-schedules-v2:${user?.id || 'guest'}`;
   const signature = useMemo(() => schedule?.sections.map((item) => `${item.course_id}-${item.section_id}`).join('|'), [schedule]);
 
-  const persist = (items: SavedSchedule[]) => { setSaved(items); localStorage.setItem(storageKey, JSON.stringify(items)); };
   useEffect(() => {
+    setCloudSynced(false);
+    let local = readSaved(storageKey);
+    if (!local.length) {
+      const legacy = readSaved(legacyStorageKey);
+      if (legacy.length) { local = legacy; localStorage.setItem(storageKey, JSON.stringify(legacy)); localStorage.removeItem(legacyStorageKey); }
+    }
+    setSaved(local);
     if (!user || !neonClient) return;
-    loadCloudSchedules().then((records) => {
-      const items = records.map((record) => ({ id: record.id, name: record.name, term: record.term, savedAt: record.created_at, schedule: record.schedule }));
-      persist(items);
-    }).catch(() => setNotice('Cloud saves are temporarily unavailable; device saves still work.'));
-  }, [user?.id]);
+    loadCloudSchedules().then(async (records) => {
+      const cloud = records.map((record) => ({ id: record.id, name: record.name, term: record.term, savedAt: record.created_at, schedule: record.schedule }));
+      const cloudIds = new Set(cloud.map((item) => item.id));
+      const missing = local.filter((item) => !cloudIds.has(item.id));
+      for (const item of missing) await saveCloudSchedule({ id: item.id, user_id: user.id, name: item.name, term: item.term, schedule: item.schedule });
+      const merged = [...cloud, ...missing].slice(0, 20);
+      setSaved(merged); localStorage.setItem(storageKey, JSON.stringify(merged)); setCloudSynced(true);
+    }).catch(() => setNotice('Account sync is unavailable right now. Your schedules are safe on this device.'));
+  }, [user?.id, storageKey]);
+
+  const persist = (items: SavedSchedule[]) => { setSaved(items); localStorage.setItem(storageKey, JSON.stringify(items)); };
 
   const save = async () => {
     if (!schedule || !signature) return;
@@ -39,8 +53,8 @@ export const ScheduleActions: React.FC<Props> = ({ schedule, term, onSelect }) =
     const item = { id: crypto.randomUUID(), name: `Schedule ${saved.length + 1}`, term, savedAt: new Date().toISOString(), schedule };
     persist([item, ...saved].slice(0, 20));
     if (user && neonClient) {
-      try { await saveCloudSchedule({ id: item.id, user_id: user.id, name: item.name, term, schedule }); setNotice('Saved to your account and this device.'); }
-      catch { setNotice('Saved on this device, but cloud sync failed.'); }
+      try { await saveCloudSchedule({ id: item.id, user_id: user.id, name: item.name, term, schedule }); setCloudSynced(true); setNotice('Saved to your account and this device.'); }
+      catch { setCloudSynced(false); setNotice('Saved safely on this device. Account sync will retry next time this page opens.'); }
     }
   };
   const share = async () => {
@@ -60,7 +74,7 @@ export const ScheduleActions: React.FC<Props> = ({ schedule, term, onSelect }) =
   };
 
   return <div className="rounded-2xl border border-slate-800 bg-slate-900 p-3 shadow-md">
-    <div className="mb-2 flex items-center justify-between"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">My schedules</span><span className="text-[9px] text-slate-500">{user && neonClient ? 'Synced to account' : 'Saved on this device'}</span></div>
+    <div className="mb-2 flex items-center justify-between"><span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">My schedules</span><span className="text-[9px] text-slate-500">{cloudSynced ? 'Synced to account' : 'Saved on this device'}</span></div>
     <div className="grid grid-cols-2 gap-2">
       <button type="button" disabled={!schedule} onClick={save} className="flex items-center justify-center gap-1.5 rounded-xl bg-white px-2 py-2 text-[10px] font-semibold text-slate-800 disabled:opacity-40"><Bookmark className="h-3 w-3"/> Save</button>
       <button type="button" disabled={!schedule} onClick={share} className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-700 px-2 py-2 text-[10px] font-semibold text-slate-200 disabled:opacity-40">{copied ? <Check className="h-3 w-3"/> : <Copy className="h-3 w-3"/>}{copied ? 'Link copied' : 'Share link'}</button>

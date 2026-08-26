@@ -77,6 +77,10 @@ async def init_db() -> None:
                 END $$
             """))
             for statement in (
+                "ALTER TABLE user_saved_schedules ALTER COLUMN created_at SET DEFAULT now()",
+                "ALTER TABLE user_saved_schedules ALTER COLUMN updated_at SET DEFAULT now()",
+                "ALTER TABLE user_planner_states ALTER COLUMN updated_at SET DEFAULT now()",
+                "ALTER TABLE user_audit_summaries ALTER COLUMN updated_at SET DEFAULT now()",
                 "ALTER TABLE user_saved_schedules ENABLE ROW LEVEL SECURITY",
                 "ALTER TABLE user_planner_states ENABLE ROW LEVEL SECURITY",
                 "ALTER TABLE user_audit_summaries ENABLE ROW LEVEL SECURITY",

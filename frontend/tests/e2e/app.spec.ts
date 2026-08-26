@@ -34,8 +34,12 @@ test('has no serious or critical automated accessibility violations', async ({ p
 });
 
 test('opens the optional account flow', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('terpschedule-theme', 'dark'));
+  await page.reload();
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('dialog', { name: /create a terpschedule account/i })).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: /create a terpschedule account/i });
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveCSS('background-color', 'rgb(28, 28, 30)');
   await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible();
   await expect(page.getByLabel('Email')).toBeVisible();
 });
