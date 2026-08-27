@@ -22,10 +22,10 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
       : (response?.schedules || []), [availabilityFilter, response]);
 
   useEffect(() => {
-    if (visibleSchedules.length && !visibleSchedules.some((item) => item.rank === activeSchedule?.rank)) {
+    if (!activeSchedule?.customized && visibleSchedules.length && !visibleSchedules.some((item) => item.rank === activeSchedule?.rank)) {
       onSelectSchedule(visibleSchedules[0]);
     }
-  }, [visibleSchedules, activeSchedule?.rank, onSelectSchedule]);
+  }, [visibleSchedules, activeSchedule?.rank, activeSchedule?.customized, onSelectSchedule]);
 
   if (!response || response.schedules.length === 0) {
     return (

@@ -11,6 +11,11 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/terms', route => route.fulfill({ json: { selected_term: '202608', terms: [{ id: '202608', label: 'Fall 2026', has_data: true }] } }));
   await page.route('**/api/v1/sync-status', route => route.fulfill({ json: { term: '202608', automatic: true, last_course_sync: new Date().toISOString(), departments_ready: 8, walking_last_sync: null, walking_pairs: 0 } }));
   await page.route('**/api/v1/optimize', route => route.fulfill({ json: { total_combinations_checked: 1, valid_schedules_count: 1, execution_time_ms: 1, schedules: [schedule], registerable_schedules_count: 1, waitlist_schedules_count: 0, open_schedules: [schedule], waitlist_schedules: [] } }));
+  await page.route('**/api/v1/courses**', route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/MATH240')) return route.fulfill({ json: { course_id: 'MATH240', department: 'MATH', name: 'Linear Algebra', credits: 4, sections: [{ course_id: 'MATH240', section_id: '0201', instructor: 'Linear Professor', avg_rating: 4.7, avg_gpa: 3.55, seats_total: 30, open_seats: 8, waitlist_count: 0, meetings: [{ day: 'M', start_time: '10:00', end_time: '10:50', building: 'MTH', room: '1407', class_type: 'Lecture' }] }, { course_id: 'MATH240', section_id: '0202', instructor: 'Conflict Professor', avg_rating: 4.1, avg_gpa: 3.2, seats_total: 30, open_seats: 3, waitlist_count: 0, meetings: [{ day: 'M', start_time: '09:30', end_time: '10:20', building: 'MTH', room: '0101', class_type: 'Lecture' }] }] } });
+    return route.fulfill({ json: [{ course_id: 'MATH240', department: 'MATH', name: 'Linear Algebra', credits: 4 }] });
+  });
   await page.goto('/');
 });
 
@@ -147,8 +152,47 @@ test('saves, renames, restores, and closes a schedule', async ({ page }) => {
   if (await rankingTab.isVisible()) await rankingTab.click();
   await expect(page.getByText('Campus compact')).toBeVisible();
   await page.getByText('Campus compact').click();
+  const gridTabAfterRestore = page.getByRole('button', { name: 'Calendar', exact: true });
+  if (await gridTabAfterRestore.isVisible()) await gridTabAfterRestore.click();
+  await expect(page.getByRole('region', { name: 'Schedule summary' })).toContainText('3.10');
+  await expect(page.getByRole('region', { name: 'Schedule summary' })).toContainText('4.2 / 5');
+  if (await rankingTab.isVisible()) await rankingTab.click();
   await page.getByRole('button', { name: /close schedule/i }).click();
   const gridTab = page.getByRole('button', { name: 'Calendar', exact: true });
   if (await gridTab.isVisible()) await gridTab.click();
   await expect(page.getByText('No Schedule Generated')).toBeVisible();
+});
+
+test('manually adds a real section and recalculates schedule metrics', async ({ page }) => {
+  await page.getByRole('button', { name: /build my schedule/i }).click();
+  const gridTab = page.getByRole('button', { name: 'Calendar', exact: true });
+  if (await gridTab.isVisible()) await gridTab.click();
+  await page.getByRole('button', { name: /add class/i }).click();
+  const builder = page.getByRole('region', { name: 'Schedule builder' });
+  await builder.getByPlaceholder(/search cmsc132/i).fill('MATH240');
+  await builder.getByRole('button', { name: /MATH240/ }).click();
+  await builder.getByRole('button', { name: 'Add', exact: true }).first().click();
+  const summary = page.getByRole('region', { name: 'Schedule summary' });
+  await expect(summary).toContainText('4');
+  await expect(summary).toContainText('3.55');
+  await expect(summary).toContainText('4.7 / 5');
+  await expect(page.getByRole('button', { name: /view math240 section/i })).toBeVisible();
+});
+
+test('warns about manual conflicts and can replace the conflicting section', async ({ page }) => {
+  await page.getByRole('button', { name: /build my schedule/i }).click();
+  const inputsTab = page.getByRole('button', { name: 'Inputs' });
+  if (await inputsTab.isVisible()) await inputsTab.click();
+  await page.getByRole('button', { name: /generate schedules/i }).click();
+  const gridTab = page.getByRole('button', { name: 'Calendar', exact: true });
+  if (await gridTab.isVisible()) await gridTab.click();
+  const builder = page.getByRole('region', { name: 'Schedule builder' });
+  await builder.getByRole('button', { name: /add class/i }).click();
+  await builder.getByPlaceholder(/search cmsc132/i).fill('MATH240');
+  await builder.getByRole('button', { name: /MATH240/ }).click();
+  await builder.getByRole('button', { name: 'Add', exact: true }).nth(1).click();
+  await expect(builder.getByRole('alert')).toContainText('Conflicts with CMSC132 0101');
+  await builder.getByRole('button', { name: /replace and add/i }).click();
+  await expect(page.getByRole('button', { name: /view math240 section 0202/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /view cmsc132 section/i })).toHaveCount(0);
 });

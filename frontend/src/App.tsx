@@ -13,6 +13,8 @@ import { AlertCircle, Calendar, Sliders, BarChart3, Clock3, Server } from 'lucid
 import { LegalDialog, type LegalPage } from './components/LegalDialog';
 import { LandingPage } from './components/LandingPage';
 import { ScheduleActions } from './components/ScheduleActions';
+import { ScheduleBuilder } from './components/ScheduleBuilder';
+import { ScheduleSummary } from './components/ScheduleSummary';
 import { DegreeAuditImporter } from './components/DegreeAuditImporter';
 import { authClient, neonClient } from './auth';
 import { loadPlannerState, savePlannerState } from './api/workspace';
@@ -336,6 +338,15 @@ export const App: React.FC = () => {
               mobileTab !== 'grid' ? 'hidden lg:block' : ''
             }`}
           >
+            {activeSchedule && <ScheduleSummary schedule={activeSchedule} />}
+            <ScheduleBuilder
+              schedule={activeSchedule}
+              term={term}
+              onChange={(nextSchedule) => {
+                setActiveSchedule(nextSchedule);
+                setSelectedCourses(nextSchedule.sections.map((section) => section.course_id));
+              }}
+            />
             <CalendarGrid schedule={activeSchedule} visibleMeetingTypes={visibleMeetingTypes} onVisibleMeetingTypesChange={setVisibleMeetingTypes} />
           </section>
 

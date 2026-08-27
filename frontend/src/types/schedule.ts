@@ -53,6 +53,7 @@ export interface RankedSchedule {
   total_score: number;
   metrics: ScheduleMetrics;
   sections: Section[];
+  customized?: boolean;
 }
 
 export interface OptimizeResponse {
@@ -109,4 +110,28 @@ export interface CourseSearchResult {
   department: string;
   name: string;
   credits: number;
+}
+
+export interface CourseSectionResult {
+  section_id: string;
+  course_id: string;
+  instructor?: string | null;
+  avg_rating?: number | null;
+  avg_gpa?: number | null;
+  seats_total: number;
+  open_seats: number;
+  waitlist_count: number;
+  meetings: Array<{
+    day: string;
+    start_time: string;
+    end_time: string;
+    building?: string | null;
+    room?: string | null;
+    class_type?: string | null;
+  }>;
+}
+
+export interface CourseDetail extends CourseSearchResult {
+  description?: string | null;
+  sections: CourseSectionResult[];
 }

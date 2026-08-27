@@ -147,9 +147,14 @@ body {
 .landing-feature-card { transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease; }
 .landing-feature-card:hover { transform: translateY(-6px); border-color: rgba(0,0,0,.09); box-shadow: 0 24px 55px rgba(0,0,0,.08); }
 .generation-signal { width: 34%; animation: generation-sweep 1.55s cubic-bezier(.55,.05,.35,.95) infinite; box-shadow: 0 0 14px rgba(37,99,235,.45); }
+.app-shell .builder-primary { background: #c8102e; color: #fff !important; }
+.builder-chip { background: #f0f0f2; color: #1d1d1f; }
+.builder-chip-muted { color: #515157; }
 
 .dark-mode body,
 .dark-mode .app-shell { background: #0b0b0d !important; color: #f5f5f7 !important; }
+.dark-mode .builder-chip { background: #2c2c2e !important; color: #f5f5f7 !important; }
+.dark-mode .builder-chip-muted { color: #c7c7cc !important; }
 .dark-mode .app-shell header { background: rgba(20,20,22,.84) !important; border-color: rgba(255,255,255,.1) !important; }
 .dark-mode .app-shell .bg-slate-900,
 .dark-mode .app-shell .bg-slate-900\/40,

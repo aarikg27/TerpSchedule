@@ -1,4 +1,4 @@
-import type { CourseSearchResult, OptimizeRequest, OptimizeResponse } from '../types/schedule';
+import type { CourseDetail, CourseSearchResult, OptimizeRequest, OptimizeResponse } from '../types/schedule';
 
 const API_ORIGIN = (import.meta.env.VITE_API_ORIGIN || '').replace(/\/$/, '');
 const API_BASE = `${API_ORIGIN}/api/v1`;
@@ -11,6 +11,14 @@ export async function searchCourses(query: string, term?: string): Promise<Cours
   if (!res.ok) {
     throw new Error(`Failed to search courses: ${res.statusText}`);
   }
+  return res.json();
+}
+
+export async function getCourseDetail(courseId: string, term?: string): Promise<CourseDetail> {
+  const params = new URLSearchParams();
+  if (term) params.set('term', term);
+  const res = await fetch(`${API_BASE}/courses/${encodeURIComponent(courseId)}?${params}`);
+  if (!res.ok) throw new Error('Could not load sections for this course.');
   return res.json();
 }
 
