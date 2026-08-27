@@ -287,7 +287,12 @@ export const App: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-2"><strong className="text-sm text-slate-900">{apiReady ? 'Building your schedules' : 'Connecting to the scheduling server'}</strong><span className="font-mono text-xs font-semibold text-blue-700">{generationElapsed}s elapsed</span></div>
                 <p className="mt-1 text-xs leading-5 text-slate-600">{apiReady ? 'Checking section combinations, applying your constraints, and ranking the best matches.' : 'The free server may be waking after inactivity. Your request is still active and this can take about a minute.'}</p>
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-blue-100"><div className="h-full w-1/3 animate-[pulse_1.2s_ease-in-out_infinite] rounded-full bg-blue-600"/></div>
+                <div className="generation-track mt-3 h-1.5 overflow-hidden rounded-full bg-blue-100" aria-hidden="true"><div className="generation-signal h-full rounded-full bg-blue-600"/></div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-medium text-slate-500">
+                  <span className="flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${apiReady ? 'bg-emerald-500' : 'animate-pulse bg-blue-500'}`}/>{apiReady ? 'Server reached' : 'Waking server'}</span>
+                  <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500"/>Exploring combinations</span>
+                  <span className="text-slate-400">Ranking follows automatically</span>
+                </div>
                 {generationElapsed >= 60 && <p className="mt-2 text-[10px] font-medium text-amber-700">Still working—first requests can occasionally take longer than one minute. You do not need to press Generate again.</p>}
               </div>
             </div>

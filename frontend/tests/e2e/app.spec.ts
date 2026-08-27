@@ -15,7 +15,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('generates, opens details, and preserves dark theme', async ({ page }) => {
-  await page.getByRole('button', { name: /start planning/i }).click();
+  await page.getByRole('button', { name: /build my schedule/i }).click();
   const inputsTab = page.getByRole('button', { name: 'Inputs' });
   if (await inputsTab.isVisible()) await inputsTab.click();
   await page.getByRole('button', { name: /generate schedules/i }).click();
@@ -34,7 +34,7 @@ test('has no serious or critical automated accessibility violations', async ({ p
 });
 
 test('planner results have no serious or critical automated accessibility violations', async ({ page }) => {
-  await page.getByRole('button', { name: /start planning/i }).click();
+  await page.getByRole('button', { name: /build my schedule/i }).click();
   const inputsTab = page.getByRole('button', { name: 'Inputs' });
   if (await inputsTab.isVisible()) await inputsTab.click();
   await page.getByRole('button', { name: /generate schedules/i }).click();
@@ -46,7 +46,7 @@ test('planner results have no serious or critical automated accessibility violat
 test('dark planner results have no serious or critical automated accessibility violations', async ({ page }) => {
   await page.evaluate(() => localStorage.setItem('terpschedule-theme', 'dark'));
   await page.reload();
-  await page.getByRole('button', { name: /start planning/i }).click();
+  await page.getByRole('button', { name: /build my schedule/i }).click();
   const inputsTab = page.getByRole('button', { name: 'Inputs' });
   if (await inputsTab.isVisible()) await inputsTab.click();
   await page.getByRole('button', { name: /generate schedules/i }).click();
@@ -79,7 +79,7 @@ test('makes privacy and terms available before entering the planner', async ({ p
 
 test('planner does not overflow a narrow phone viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: /start planning/i }).click();
+  await page.getByRole('button', { name: /build my schedule/i }).click();
   const widths = await page.evaluate(() => ({
     viewport: window.innerWidth,
     document: document.documentElement.scrollWidth,
@@ -88,8 +88,25 @@ test('planner does not overflow a narrow phone viewport', async ({ page }) => {
   await expect(page.getByRole('button', { name: /export schedule/i })).toBeVisible();
 });
 
+test('shows a live indeterminate signal while schedules are being built', async ({ page }) => {
+  await page.unroute('**/api/v1/optimize');
+  await page.route('**/api/v1/optimize', async route => {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    await route.fulfill({ json: { total_combinations_checked: 1, valid_schedules_count: 1, execution_time_ms: 1, schedules: [schedule], registerable_schedules_count: 1, waitlist_schedules_count: 0, open_schedules: [schedule], waitlist_schedules: [] } });
+  });
+  await page.getByRole('button', { name: /build my schedule/i }).click();
+  const inputsTab = page.getByRole('button', { name: 'Inputs' });
+  if (await inputsTab.isVisible()) await inputsTab.click();
+  await page.getByRole('button', { name: /generate schedules/i }).click();
+  await expect(page.getByRole('status')).toContainText(/building your schedules|connecting to the scheduling server/i);
+  await expect(page.locator('.generation-signal')).toBeVisible();
+  await expect(page.locator('.generation-signal')).toHaveCSS('animation-name', 'generation-sweep');
+  await expect(page.getByText(/exploring combinations/i)).toBeVisible();
+  await expect(page.getByText(/CMSC132/).first()).toBeVisible();
+});
+
 test('keeps the active ranking card inside its scroll area and omits diagnostics', async ({ page }) => {
-  await page.getByRole('button', { name: /start planning/i }).click();
+  await page.getByRole('button', { name: /build my schedule/i }).click();
   const inputsTab = page.getByRole('button', { name: 'Inputs' });
   if (await inputsTab.isVisible()) await inputsTab.click();
   await page.getByRole('button', { name: /generate schedules/i }).click();
@@ -106,7 +123,7 @@ test('keeps the active ranking card inside its scroll area and omits diagnostics
 
 test('shows the landing page first and opens the planner', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /your semester/i })).toBeVisible();
-  await page.getByRole('button', { name: /start planning/i }).click();
+  await page.getByRole('button', { name: /build my schedule/i }).click();
   await expect(page).toHaveURL(/\/planner$/);
   const inputsTab = page.getByRole('button', { name: 'Inputs' });
   if (await inputsTab.isVisible()) await inputsTab.click();
@@ -114,7 +131,7 @@ test('shows the landing page first and opens the planner', async ({ page }) => {
 });
 
 test('saves, renames, restores, and closes a schedule', async ({ page }) => {
-  await page.getByRole('button', { name: /start planning/i }).click();
+  await page.getByRole('button', { name: /build my schedule/i }).click();
   const inputsTab = page.getByRole('button', { name: 'Inputs' });
   if (await inputsTab.isVisible()) await inputsTab.click();
   await page.getByRole('button', { name: /generate schedules/i }).click();
