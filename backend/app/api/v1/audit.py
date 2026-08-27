@@ -9,7 +9,7 @@ router = APIRouter()
 async def parse_audit(file: UploadFile = File(...)):
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=415, detail="Upload the printer-friendly audit as a PDF.")
-    payload = await file.read()
+    payload = await file.read(8_000_001)
     if len(payload) > 8_000_000:
         raise HTTPException(status_code=413, detail="Audit PDF must be smaller than 8 MB.")
     try:

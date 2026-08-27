@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import type { OptimizeResponse, RankedSchedule } from '../types/schedule';
 import { CheckCircle2, Zap, Clock, Star, CircleCheck, ListPlus } from 'lucide-react';
 
@@ -15,17 +15,17 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
 }) => {
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'open' | 'waitlist'>('all');
 
-  const visibleSchedules = availabilityFilter === 'open'
+  const visibleSchedules = useMemo(() => availabilityFilter === 'open'
     ? (response?.open_schedules || [])
     : availabilityFilter === 'waitlist'
       ? (response?.waitlist_schedules || [])
-      : (response?.schedules || []);
+      : (response?.schedules || []), [availabilityFilter, response]);
 
   useEffect(() => {
     if (visibleSchedules.length && !visibleSchedules.some((item) => item.rank === activeSchedule?.rank)) {
       onSelectSchedule(visibleSchedules[0]);
     }
-  }, [availabilityFilter, response]);
+  }, [visibleSchedules, activeSchedule?.rank, onSelectSchedule]);
 
   if (!response || response.schedules.length === 0) {
     return (
@@ -62,19 +62,8 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
           <span title={`Algorithm: ${response.execution_time_ms.toFixed(1)}ms`}>Total: {response.total_request_time_ms == null ? `${response.execution_time_ms.toFixed(1)}ms` : response.total_request_time_ms >= 1000 ? `${(response.total_request_time_ms / 1000).toFixed(1)}s` : `${response.total_request_time_ms}ms`}</span>
         </div>
       </div>
-      <details className="search-diagnostics rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] leading-relaxed text-slate-500">
-        <summary className="cursor-pointer font-semibold text-slate-200">How this search was counted</summary>
-        <div className="mt-2 space-y-1">
-          <p>{Object.entries(response.section_options_by_course || {}).map(([course, count]) => `${course}: ${count} sections`).join(' · ')}</p>
-          <p>{(response.search_space_size || 0).toLocaleString()} raw section combinations before conflicts and filters.</p>
-          <p>Checked means search-tree states explored, not UMD catalog courses.</p>
-          {!!response.applied_constraints?.length && <p>Active filters: {response.applied_constraints.join(', ')}.</p>}
-          {!response.search_complete && <p className="font-semibold text-amber-400">The search hit its time limit; these are the best results found so far.</p>}
-        </div>
-      </details>
-
       {/* Schedule List */}
-      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+      <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1.5">
         {visibleSchedules.map((schedule, idx) => {
           const isActive = activeSchedule?.rank === schedule.rank;
           const { metrics } = schedule;
@@ -89,7 +78,7 @@ export const ScheduleRanking: React.FC<ScheduleRankingProps> = ({
               onClick={() => onSelectSchedule(schedule)}
               className={`w-full text-left p-3 rounded-xl border transition-all cursor-pointer ${
                 isActive
-                  ? 'schedule-card-active border-red-500 shadow-md scale-[1.01]'
+                  ? 'schedule-card-active border-red-500 shadow-md ring-1 ring-red-500/20'
                   : 'schedule-card border-slate-200 bg-white hover:border-slate-300'
               }`}
             >

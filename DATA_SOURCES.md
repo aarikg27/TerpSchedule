@@ -39,7 +39,7 @@ The public data cannot always determine whether a waitlist is accepting addition
 
 ## Semester support
 
-The public interface intentionally supports Fall 2026 only. Although older Testudo pages may remain accessible, the current database keys are not term-aware. Exposing multiple terms before that migration could mix sections from different semesters.
+Courses and sections are keyed by Testudo term, so data from different semesters stays separate. The app selects the calendar-appropriate term when synchronized data is available and lists the terms known to the backend. A newly announced semester may appear before all departments have finished their first refresh.
 
 ## Independence
 

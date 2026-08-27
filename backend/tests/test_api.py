@@ -15,6 +15,15 @@ async def test_health_check():
 
 
 @pytest.mark.asyncio
+async def test_optimize_rejects_oversized_or_duplicate_course_lists():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        oversized = await ac.post("/api/v1/optimize", json={"courses": [f"TEST{i:03d}" for i in range(9)]})
+        duplicated = await ac.post("/api/v1/optimize", json={"courses": ["CMSC132", "CMSC132"]})
+    assert oversized.status_code == 422
+    assert duplicated.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_optimize_and_courses_flow(monkeypatch):
     async def skip_external_metrics(*args, **kwargs):
         return None

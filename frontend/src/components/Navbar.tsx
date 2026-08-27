@@ -7,6 +7,8 @@ import type { AvailableTerm } from '../api/client';
 import { authClient } from '../auth';
 import { AuthDialog } from './AuthDialog';
 import { BrandMark } from './BrandMark';
+import { AccountSettingsDialog } from './AccountSettingsDialog';
+import type { LegalPage } from './LegalDialog';
 
 interface NavbarProps {
   term: string;
@@ -16,6 +18,7 @@ interface NavbarProps {
   terms: AvailableTerm[];
   onTermChange: (term: string) => void;
   onHome: () => void;
+  onLegalPage: (page: LegalPage) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -26,10 +29,12 @@ export const Navbar: React.FC<NavbarProps> = ({
   terms,
   onTermChange,
   onHome,
+  onLegalPage,
 }) => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'sign-in' | 'sign-up' | null>(null);
+  const [accountOpen, setAccountOpen] = useState(false);
   const session = authClient?.useSession();
   useEffect(() => {
     getSyncStatus().then(setSyncStatus).catch(() => setSyncStatus(null));
@@ -58,8 +63,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         {/* Controls */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-800/80 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-slate-300" title={`Testudo term ${term}`}>
+        <div className="flex w-full items-center justify-between gap-1.5 sm:w-auto sm:justify-start sm:gap-3">
+          <div className="flex items-center gap-1.5 bg-slate-800/80 border border-slate-700/80 rounded-lg px-2 py-1.5 text-xs text-slate-300 sm:gap-2 sm:px-3" title={`Testudo term ${term}`}>
             <Calendar className="w-3.5 h-3.5 text-amber-400" />
             <select aria-label="Semester" value={term} onChange={(event) => onTermChange(event.target.value)} className="border-0 bg-transparent p-0 text-xs font-semibold text-slate-100 outline-none">
               {terms.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
@@ -88,13 +93,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {session?.data?.user ? (
             <div className="flex items-center gap-1.5">
-              <div className="hidden md:flex max-w-36 items-center gap-1.5 rounded-full bg-slate-800 px-3 py-2 text-xs font-medium text-slate-200"><UserRound className="h-3.5 w-3.5"/><span className="truncate">{session.data.user.name || session.data.user.email}</span></div>
+              <button type="button" onClick={() => setAccountOpen(true)} aria-label="Open account and data settings" className="hidden md:flex max-w-36 items-center gap-1.5 rounded-full bg-slate-800 px-3 py-2 text-xs font-medium text-slate-200 hover:bg-slate-700"><UserRound className="h-3.5 w-3.5"/><span className="truncate">{session.data.user.name || session.data.user.email}</span></button>
+              <button type="button" onClick={() => setAccountOpen(true)} aria-label="Open account and data settings" className="flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-slate-600 md:hidden"><UserRound className="h-4 w-4"/></button>
               <button type="button" aria-label="Sign out" onClick={() => authClient?.signOut()} className="flex h-9 w-9 items-center justify-center rounded-full border border-black/10 bg-white text-slate-600"><LogOut className="h-4 w-4" /></button>
             </div>
           ) : authClient ? (
             <div className="flex items-center gap-1.5">
-              <button type="button" onClick={() => setAuthMode('sign-in')} className="flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100"><LogIn className="h-3.5 w-3.5"/> Sign in</button>
-              <button type="button" onClick={() => setAuthMode('sign-up')} className="rounded-full bg-slate-900 px-3.5 py-2 text-xs font-semibold text-white">Sign up</button>
+              <button type="button" onClick={() => setAuthMode('sign-in')} className="flex items-center gap-1 rounded-full px-2 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 sm:gap-1.5 sm:px-3"><LogIn className="h-3.5 w-3.5"/> Sign in</button>
+              <button type="button" onClick={() => setAuthMode('sign-up')} className="rounded-full bg-slate-900 px-2.5 py-2 text-xs font-semibold text-white sm:px-3.5">Sign up</button>
             </div>
           ) : null}
 
@@ -102,18 +108,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={handleExportIcal}
             disabled={!activeSchedule}
-            className={`flex items-center gap-2 text-xs font-semibold px-4 py-2 rounded-lg transition-all shadow-sm ${
+            aria-label="Export schedule (.ics)"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-lg text-xs font-semibold shadow-sm transition-all sm:w-auto sm:px-4 sm:py-2 ${
               activeSchedule
                 ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-red-600/30 cursor-pointer'
                 : 'bg-slate-800/60 text-slate-500 border border-slate-700/50 cursor-not-allowed'
             }`}
           >
             <Download className="w-4 h-4" />
-            <span>Export .ics</span>
+            <span className="hidden sm:inline">Export .ics</span>
           </button>
         </div>
       </div>
-      {authMode && <AuthDialog mode={authMode} onClose={() => setAuthMode(null)} />}
+      {authMode && <AuthDialog mode={authMode} onClose={() => setAuthMode(null)} onLegalPage={(page) => { setAuthMode(null); onLegalPage(page); }} />}
+      {accountOpen && session?.data?.user && <AccountSettingsDialog user={session.data.user} onClose={() => setAccountOpen(false)} />}
     </header>
   );
 };

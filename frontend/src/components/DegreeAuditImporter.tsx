@@ -4,11 +4,14 @@ import { FileUp, GraduationCap, LoaderCircle, Trash2, X } from 'lucide-react';
 import { parseDegreeAudit, type AuditSummary } from '../api/client';
 import { authClient, neonClient } from '../auth';
 import { deleteAuditSummary, loadAuditSummary, saveAuditSummary } from '../api/workspace';
+import { useModalDialog } from '../hooks/useModalDialog';
 
 interface Props { onAddCourses: (courses: string[]) => void }
+type LocalAuditCache = { summary: AuditSummary; savedAt: string };
 
 export const DegreeAuditImporter: React.FC<Props> = ({ onAddCourses }) => {
   const input = useRef<HTMLInputElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,17 +20,30 @@ export const DegreeAuditImporter: React.FC<Props> = ({ onAddCourses }) => {
   const [cloudSynced, setCloudSynced] = useState(false);
   const session = authClient?.useSession();
   const user = session?.data?.user;
-  const localKey = `terpschedule-audit-summary-v1:${user?.id || 'guest'}`;
+  const userId = user?.id;
+  useModalDialog(dialog, () => setOpen(false), open);
+  const localKey = `terpschedule-audit-summary-v1:${userId || 'guest'}`;
   useEffect(() => {
-    setSummary(null); setSavedAt(null); setCloudSynced(false);
-    try {
-      const local = JSON.parse(localStorage.getItem(localKey) || 'null') as { summary: AuditSummary; savedAt: string } | null;
-      if (local?.summary.parser_version === 3) { setSummary(local.summary); setSavedAt(local.savedAt); }
-    } catch { /* ignore damaged local cache */ }
-    if (user && neonClient) loadAuditSummary().then((stored) => {
-      if (stored?.summary.parser_version === 3) { setSummary(stored.summary); setSavedAt(stored.source_date || stored.updated_at); setCloudSynced(true); localStorage.setItem(localKey, JSON.stringify({ summary: stored.summary, savedAt: stored.source_date || stored.updated_at })); }
-    }).catch(() => undefined);
-  }, [user?.id, localKey]);
+    let cancelled = false;
+    void Promise.resolve().then(async () => {
+      let local: LocalAuditCache | null = null;
+      try { local = JSON.parse(localStorage.getItem(localKey) || 'null') as LocalAuditCache | null; } catch { /* ignore damaged local cache */ }
+      if (cancelled) return;
+      setSummary(local?.summary.parser_version === 3 ? local.summary : null);
+      setSavedAt(local?.summary.parser_version === 3 ? local.savedAt : null);
+      setCloudSynced(false);
+      if (!userId || !neonClient) return;
+      try {
+        const stored = await loadAuditSummary();
+        if (!cancelled && stored?.summary.parser_version === 3) {
+          const storedAt = stored.source_date || stored.updated_at;
+          setSummary(stored.summary); setSavedAt(storedAt); setCloudSynced(true);
+          localStorage.setItem(localKey, JSON.stringify({ summary: stored.summary, savedAt: storedAt }));
+        }
+      } catch { /* retain the local copy */ }
+    });
+    return () => { cancelled = true; };
+  }, [userId, localKey]);
   const upload = async (file?: File) => {
     if (!file) return; setLoading(true); setError('');
     try {
@@ -47,8 +63,8 @@ export const DegreeAuditImporter: React.FC<Props> = ({ onAddCourses }) => {
 
   return <>
     <button type="button" onClick={() => setOpen(true)} className="flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-semibold text-slate-300 hover:border-slate-500"><GraduationCap className="h-4 w-4"/> {summary ? 'View degree progress' : 'Import degree audit'}</button>
-    {open && createPortal(<div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-label="Import degree audit">
-      <div className="audit-dialog max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl dark:border-white/10">
+    {open && createPortal(<div className="fixed inset-0 z-[1000] grid place-items-center bg-black/60 p-4 backdrop-blur-md" onMouseDown={(event) => event.target === event.currentTarget && setOpen(false)}>
+      <div ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label="Import degree audit" className="audit-dialog max-h-[calc(100vh-2rem)] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-5 shadow-2xl outline-none dark:border-white/10">
         <div className="flex items-start justify-between"><div><h2 className="text-xl font-bold text-slate-900">Import your UMD degree audit</h2><p className="mt-1 text-xs text-slate-500">No AI required. The PDF is parsed for this request and is not retained.</p></div><button type="button" aria-label="Close" onClick={() => setOpen(false)} className="rounded-full p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4"/></button></div>
         <ol className="my-4 grid gap-2 rounded-2xl bg-slate-50 p-4 text-xs text-slate-600 sm:grid-cols-3">
           <li><strong className="block text-slate-900">1. Testudo</strong>Open Degree Audit and run a new audit.</li>

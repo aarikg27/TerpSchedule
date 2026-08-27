@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import type { RankedSchedule, Section, Meeting } from '../types/schedule';
 import { Star, MapPin, Clock, Footprints, Laptop, User, FlaskConical, Users, Presentation, X, ExternalLink, Navigation } from 'lucide-react';
+import { useModalDialog } from '../hooks/useModalDialog';
 
 interface CalendarGridProps {
   schedule: RankedSchedule | null;
@@ -75,6 +76,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
     nextMeeting?: Meeting;
   } | null>(null);
   const [selectedSection, setSelectedSection] = useState<{ section: Section; meeting: Meeting } | null>(null);
+  const detailsDialog = useRef<HTMLDivElement>(null);
+  useModalDialog(detailsDialog, () => setSelectedSection(null), Boolean(selectedSection));
 
   if (!schedule) {
     return (
@@ -311,7 +314,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
           : null;
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4 backdrop-blur-sm" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedSection(null); }}>
-            <div role="dialog" aria-modal="true" aria-label={`${section.course_id} section details`} className="course-details-modal w-full max-w-lg overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-2xl">
+            <div ref={detailsDialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`${section.course_id} section details`} className="course-details-modal w-full max-w-lg overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-2xl outline-none">
               <div className={`border-b p-6 ${colors.bg} ${colors.border}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div>

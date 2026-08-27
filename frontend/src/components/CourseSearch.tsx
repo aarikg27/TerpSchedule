@@ -25,26 +25,22 @@ export const CourseSearch: React.FC<CourseSearchProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
+    if (!query.trim()) return;
 
+    let cancelled = false;
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const data = await searchCourses(query, term);
-        setResults(data);
-        setIsOpen(true);
+        if (!cancelled) { setResults(data); setIsOpen(true); }
       } catch (err) {
         console.error('Failed to search courses:', err);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, 250);
 
-    return () => clearTimeout(timer);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [query, term]);
 
   // Click outside listener
@@ -97,7 +93,11 @@ export const CourseSearch: React.FC<CourseSearchProps> = ({
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setQuery(next);
+              if (!next.trim()) { setResults([]); setLoading(false); setIsOpen(false); }
+            }}
             onKeyDown={handleKeyDown}
             onFocus={() => query.trim() && setIsOpen(true)}
             placeholder="Search e.g. CMSC132, Linear Algebra..."

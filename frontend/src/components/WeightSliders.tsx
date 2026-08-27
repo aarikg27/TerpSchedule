@@ -23,7 +23,8 @@ export const WeightSliders: React.FC<PreferenceRankingProps> = ({ ranking, onCha
   const commitOrder = (items: PreferenceRank[]) => {
     const update = () => onChange(items.map((item, index) => ({ ...item, rank: index + 1 })));
     const documentWithTransitions = document as Document & { startViewTransition?: (callback: () => void) => void };
-    documentWithTransitions.startViewTransition ? documentWithTransitions.startViewTransition(update) : update();
+    if (documentWithTransitions.startViewTransition) documentWithTransitions.startViewTransition(update);
+    else update();
   };
 
   const moveTo = (criterion: PreferenceCriterion, targetIndex: number) => {
@@ -70,7 +71,7 @@ export const WeightSliders: React.FC<PreferenceRankingProps> = ({ ranking, onCha
           );
         })}
       </div>
-      <button type="button" onClick={onGenerate} disabled={disabled || loading} className="w-full rounded-full bg-blue-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">
+      <button type="button" onClick={onGenerate} disabled={disabled || loading} className="w-full rounded-full bg-blue-700 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">
         <span className="flex items-center justify-center gap-2">
           {loading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <Sparkles className="w-4 h-4" />}
           {loading ? 'Building schedules…' : 'Generate schedules'}

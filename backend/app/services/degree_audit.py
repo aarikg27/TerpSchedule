@@ -27,8 +27,17 @@ def _number(pattern: str, text: str) -> float | None:
 
 
 def parse_degree_audit(payload: bytes) -> dict:
-    reader = PdfReader(BytesIO(payload))
-    text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    try:
+        reader = PdfReader(BytesIO(payload))
+        if getattr(reader, "is_encrypted", False):
+            raise ValueError("Password-protected degree audits are not supported.")
+        if len(reader.pages) > 40:
+            raise ValueError("Degree audit PDFs may contain at most 40 pages.")
+        text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError("That PDF could not be read. Download a fresh printer-friendly degree audit and try again.") from exc
     if "AUDIT" not in text.upper() or "NEEDS:" not in text.upper():
         raise ValueError("This does not look like a printer-friendly UMD degree audit.")
 

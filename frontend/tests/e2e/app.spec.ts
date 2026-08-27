@@ -3,8 +3,8 @@ import AxeBuilder from '@axe-core/playwright';
 
 const schedule = {
   rank: 1, total_score: 91,
-  metrics: { avg_professor_rating: 4.2, avg_gpa: 3.1, total_gap_minutes: 10, active_days: 2, max_walk_time_mins: 5, open_sections: 1, unavailable_sections: 0, registerable_now: true },
-  sections: [{ course_id: 'CMSC132', section_id: '0101', instructor: 'Test Professor', rating: 4.2, gpa: 3.1, gpa_available: true, seats_total: 30, open_seats: 4, waitlist_count: 0, availability: 'open', meetings: [{ day: 'M', start: '09:00', end: '09:50', building: 'IRB', room: '0324', class_type: 'Lecture' }] }],
+  metrics: { avg_professor_rating: 4.2, avg_gpa: 3.1, gpa_sections_with_data: 1, gpa_sections_total: 1, total_credits: 4, total_gap_minutes: 10, active_days: 2, max_walk_time_mins: 5, open_sections: 1, unavailable_sections: 0, registerable_now: true },
+  sections: [{ course_id: 'CMSC132', section_id: '0101', instructor: 'Test Professor', rating: 4.2, gpa: 3.1, gpa_available: true, credits: 4, seats_total: 30, open_seats: 4, waitlist_count: 0, availability: 'open', meetings: [{ day: 'M', start: '09:00', end: '09:50', building: 'IRB', room: '0324', class_type: 'Lecture' }] }],
 };
 
 test.beforeEach(async ({ page }) => {
@@ -29,19 +29,79 @@ test('generates, opens details, and preserves dark theme', async ({ page }) => {
 });
 
 test('has no serious or critical automated accessibility violations', async ({ page }) => {
-  const results = await new AxeBuilder({ page }).disableRules(['color-contrast']).analyze();
-  expect(results.violations.filter(v => v.impact === 'critical')).toEqual([]);
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
+});
+
+test('planner results have no serious or critical automated accessibility violations', async ({ page }) => {
+  await page.getByRole('button', { name: /start planning/i }).click();
+  const inputsTab = page.getByRole('button', { name: 'Inputs' });
+  if (await inputsTab.isVisible()) await inputsTab.click();
+  await page.getByRole('button', { name: /generate schedules/i }).click();
+  const results = await new AxeBuilder({ page }).analyze();
+  const serious = results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious');
+  expect(serious).toEqual([]);
+});
+
+test('dark planner results have no serious or critical automated accessibility violations', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('terpschedule-theme', 'dark'));
+  await page.reload();
+  await page.getByRole('button', { name: /start planning/i }).click();
+  const inputsTab = page.getByRole('button', { name: 'Inputs' });
+  if (await inputsTab.isVisible()) await inputsTab.click();
+  await page.getByRole('button', { name: /generate schedules/i }).click();
+  const results = await new AxeBuilder({ page }).analyze();
+  expect(results.violations.filter(v => v.impact === 'critical' || v.impact === 'serious')).toEqual([]);
 });
 
 test('opens the optional account flow', async ({ page }) => {
-  await page.evaluate(() => localStorage.setItem('terpschedule-theme', 'dark'));
-  await page.reload();
+  await page.getByRole('button', { name: /switch from system theme/i }).click();
   await page.getByRole('button', { name: 'Create account' }).click();
   const dialog = page.getByRole('dialog', { name: /create a terpschedule account/i });
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveCSS('background-color', 'rgb(28, 28, 30)');
   await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible();
   await expect(page.getByLabel('Email')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+});
+
+test('makes privacy and terms available before entering the planner', async ({ page }) => {
+  await page.getByRole('button', { name: 'Privacy', exact: true }).click();
+  await expect(page).toHaveURL(/\/privacy$/);
+  await expect(page.getByRole('dialog', { name: /privacy policy/i })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page).toHaveURL(/\/$/);
+  await page.getByRole('button', { name: /terms & disclaimer/i }).click();
+  await expect(page).toHaveURL(/\/terms$/);
+  await expect(page.getByRole('dialog', { name: /terms and disclaimer/i })).toBeVisible();
+});
+
+test('planner does not overflow a narrow phone viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('button', { name: /start planning/i }).click();
+  const widths = await page.evaluate(() => ({
+    viewport: window.innerWidth,
+    document: document.documentElement.scrollWidth,
+  }));
+  expect(widths.document).toBeLessThanOrEqual(widths.viewport);
+  await expect(page.getByRole('button', { name: /export schedule/i })).toBeVisible();
+});
+
+test('keeps the active ranking card inside its scroll area and omits diagnostics', async ({ page }) => {
+  await page.getByRole('button', { name: /start planning/i }).click();
+  const inputsTab = page.getByRole('button', { name: 'Inputs' });
+  if (await inputsTab.isVisible()) await inputsTab.click();
+  await page.getByRole('button', { name: /generate schedules/i }).click();
+  const rankingTab = page.getByRole('button', { name: 'Rankings' });
+  if (await rankingTab.isVisible()) await rankingTab.click();
+  await expect(page.getByText(/how this search was counted/i)).toHaveCount(0);
+  const card = page.locator('.schedule-card-active');
+  const cardBox = await card.boundingBox();
+  const listBox = await card.locator('xpath=..').boundingBox();
+  expect(cardBox).not.toBeNull(); expect(listBox).not.toBeNull();
+  expect(cardBox!.x).toBeGreaterThanOrEqual(listBox!.x);
+  expect(cardBox!.x + cardBox!.width).toBeLessThanOrEqual(listBox!.x + listBox!.width + 1);
 });
 
 test('shows the landing page first and opens the planner', async ({ page }) => {
@@ -71,7 +131,7 @@ test('saves, renames, restores, and closes a schedule', async ({ page }) => {
   await expect(page.getByText('Campus compact')).toBeVisible();
   await page.getByText('Campus compact').click();
   await page.getByRole('button', { name: /close schedule/i }).click();
-  const gridTab = page.getByRole('button', { name: 'Calendar' });
+  const gridTab = page.getByRole('button', { name: 'Calendar', exact: true });
   if (await gridTab.isVisible()) await gridTab.click();
   await expect(page.getByText('No Schedule Generated')).toBeVisible();
 });

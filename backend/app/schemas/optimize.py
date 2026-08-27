@@ -1,5 +1,5 @@
 from typing import Self
-from pydantic import BaseModel, model_validator, field_validator
+from pydantic import BaseModel, Field, model_validator, field_validator
 
 class Constraints(BaseModel):
     earliest_start_time: int = 480
@@ -50,7 +50,7 @@ class PreferenceRank(BaseModel):
         return value
 
 class OptimizeRequest(BaseModel):
-    courses: list[str]
+    courses: list[str] = Field(min_length=1, max_length=8)
     term: str = "202608"
     constraints: Constraints = Constraints()
     weights: Weights = Weights()
@@ -68,9 +68,12 @@ class OptimizeRequest(BaseModel):
     @field_validator('courses')
     @classmethod
     def at_least_one_course(cls, v: list[str]) -> list[str]:
-        if not v:
-            raise ValueError('Must provide at least one course')
-        return [c.upper().strip() for c in v]
+        normalized = [c.upper().strip() for c in v]
+        if any(not course or len(course) > 12 for course in normalized):
+            raise ValueError('Each course must be a valid course ID')
+        if len(set(normalized)) != len(normalized):
+            raise ValueError('Courses must not contain duplicates')
+        return normalized
 
 class ScheduleMetrics(BaseModel):
     avg_professor_rating: float

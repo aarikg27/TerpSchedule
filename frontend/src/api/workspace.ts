@@ -70,3 +70,15 @@ export async function deleteAuditSummary(userId: string): Promise<void> {
   const { error } = await neonClient.from('user_audit_summaries').delete().eq('user_id', userId);
   if (error) throw new Error(error.message);
 }
+
+export async function deleteWorkspaceData(userId: string): Promise<void> {
+  if (!neonClient) return;
+  const operations = [
+    neonClient.from('user_saved_schedules').delete().eq('user_id', userId),
+    neonClient.from('user_planner_states').delete().eq('user_id', userId),
+    neonClient.from('user_audit_summaries').delete().eq('user_id', userId),
+  ];
+  const results = await Promise.all(operations);
+  const failure = results.find((result) => result.error)?.error;
+  if (failure) throw new Error(failure.message);
+}

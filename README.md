@@ -27,7 +27,7 @@ Results are separated by availability, so a strong conceptual schedule containin
 
 Course, section, and seat information is refreshed automatically from public UMD sources. Instructor rating and historical GPA coverage varies by instructor and course; missing data is labeled instead of presented as a real value. Walking information is an estimate, and Google Maps should be used for route-level directions.
 
-Accounts are optional. Degree-audit PDFs are processed to create the displayed analysis and are not retained by TerpSchedule. Saved account data can be cleared from the app.
+Accounts are optional. Degree-audit PDFs are processed to create the displayed analysis and are not retained by TerpSchedule. Saved planning data can be cleared and accounts can be permanently deleted from the app.
 
 TerpSchedule is a planning tool. Testudo and the official UMD degree audit remain authoritative for registration, seats, waitlists, academic requirements, and degree progress.
 

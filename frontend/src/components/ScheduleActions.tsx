@@ -25,27 +25,37 @@ export const ScheduleActions: React.FC<Props> = ({ schedule, term, onSelect, onC
   const [draftName, setDraftName] = useState('');
   const session = authClient?.useSession();
   const user = session?.data?.user;
-  const storageKey = `terpschedule-saved-schedules-v2:${user?.id || 'guest'}`;
+  const userId = user?.id;
+  const storageKey = `terpschedule-saved-schedules-v2:${userId || 'guest'}`;
   const signature = useMemo(() => schedule?.sections.map((item) => `${item.course_id}-${item.section_id}`).join('|'), [schedule]);
 
   useEffect(() => {
-    setCloudSynced(false);
-    let local = readSaved(storageKey);
-    if (!local.length) {
-      const legacy = readSaved(legacyStorageKey);
-      if (legacy.length) { local = legacy; localStorage.setItem(storageKey, JSON.stringify(legacy)); localStorage.removeItem(legacyStorageKey); }
-    }
-    setSaved(local);
-    if (!user || !neonClient) return;
-    loadCloudSchedules().then(async (records) => {
-      const cloud = records.map((record) => ({ id: record.id, name: record.name, term: record.term, savedAt: record.created_at, schedule: record.schedule }));
-      const cloudIds = new Set(cloud.map((item) => item.id));
-      const missing = local.filter((item) => !cloudIds.has(item.id));
-      for (const item of missing) await saveCloudSchedule({ id: item.id, user_id: user.id, name: item.name, term: item.term, schedule: item.schedule });
-      const merged = [...cloud, ...missing].slice(0, 20);
-      setSaved(merged); localStorage.setItem(storageKey, JSON.stringify(merged)); setCloudSynced(true);
-    }).catch(() => setNotice('Account sync is unavailable right now. Your schedules are safe on this device.'));
-  }, [user?.id, storageKey]);
+    let cancelled = false;
+    void Promise.resolve().then(async () => {
+      let local = readSaved(storageKey);
+      if (!local.length) {
+        const legacy = readSaved(legacyStorageKey);
+        if (legacy.length) { local = legacy; localStorage.setItem(storageKey, JSON.stringify(legacy)); localStorage.removeItem(legacyStorageKey); }
+      }
+      if (cancelled) return;
+      setCloudSynced(false);
+      setSaved(local);
+      if (!userId || !neonClient) return;
+      try {
+        const records = await loadCloudSchedules();
+        const cloud = records.map((record) => ({ id: record.id, name: record.name, term: record.term, savedAt: record.created_at, schedule: record.schedule }));
+        const cloudIds = new Set(cloud.map((item) => item.id));
+        const missing = local.filter((item) => !cloudIds.has(item.id));
+        for (const item of missing) await saveCloudSchedule({ id: item.id, user_id: userId, name: item.name, term: item.term, schedule: item.schedule });
+        if (cancelled) return;
+        const merged = [...cloud, ...missing].slice(0, 20);
+        setSaved(merged); localStorage.setItem(storageKey, JSON.stringify(merged)); setCloudSynced(true);
+      } catch {
+        if (!cancelled) setNotice('Account sync is unavailable right now. Your schedules are safe on this device.');
+      }
+    });
+    return () => { cancelled = true; };
+  }, [userId, storageKey]);
 
   const persist = (items: SavedSchedule[]) => { setSaved(items); localStorage.setItem(storageKey, JSON.stringify(items)); };
 
