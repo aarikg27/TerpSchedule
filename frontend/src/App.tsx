@@ -144,8 +144,7 @@ export const App: React.FC = () => {
   const cycleLandingTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   useEffect(() => {
-    // This request starts while the landing page is visible, quietly waking a
-    // sleeping free backend before most students reach the planner.
+    // Load term availability early so the planner is ready when it opens.
     getAvailableTerms().then((result) => { setTerms(result.terms); setTerm((current) => result.terms.some((item) => item.id === current) ? current : result.selected_term); setApiReady(true); }).catch(() => undefined);
   }, []);
 
@@ -288,10 +287,10 @@ export const App: React.FC = () => {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-baseline justify-between gap-2"><strong className="text-sm text-slate-900">{apiReady ? 'Building your schedules' : 'Connecting to the scheduling server'}</strong><span className="font-mono text-xs font-semibold text-blue-700">{generationElapsed}s elapsed</span></div>
-                <p className="mt-1 text-xs leading-5 text-slate-600">{apiReady ? 'Checking section combinations, applying your constraints, and ranking the best matches.' : 'The free server may be waking after inactivity. Your request is still active and this can take about a minute.'}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">{apiReady ? 'Checking section combinations, applying your constraints, and ranking the best matches.' : 'The server is starting up. Your request is still active and may take about a minute.'}</p>
                 <div className="generation-track mt-3 h-1.5 overflow-hidden rounded-full bg-blue-100" aria-hidden="true"><div className="generation-signal h-full rounded-full bg-blue-600"/></div>
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] font-medium text-slate-500">
-                  <span className="flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${apiReady ? 'bg-emerald-500' : 'animate-pulse bg-blue-500'}`}/>{apiReady ? 'Server reached' : 'Waking server'}</span>
+                  <span className="flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${apiReady ? 'bg-emerald-500' : 'animate-pulse bg-blue-500'}`}/>{apiReady ? 'Connected' : 'Connecting'}</span>
                   <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500"/>Exploring combinations</span>
                   <span className="text-slate-400">Ranking follows automatically</span>
                 </div>

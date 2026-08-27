@@ -84,6 +84,10 @@ async def test_optimize_and_courses_flow(monkeypatch):
         assert detail["course_id"] == "CMSC132"
         assert len(detail["sections"]) >= 1
 
+        walking_res = await ac.get("/api/v1/courses/walking-estimate?origin=IRB&destination=MTH")
+        assert walking_res.status_code == 200
+        assert walking_res.json()["walk_minutes"] == 8
+
         # Optimize endpoint
         optimize_payload = {
             "courses": ["CMSC132", "MATH240"],

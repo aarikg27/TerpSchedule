@@ -89,8 +89,8 @@ body {
 }
 
 @keyframes landing-rise {
-  from { transform: translateY(20px); }
-  to { transform: translateY(0); }
+  from { transform: translateY(14px) scale(.99); }
+  to { transform: translateY(0) scale(1); }
 }
 
 @keyframes landing-drift {
@@ -133,7 +133,7 @@ body {
 .landing-orb { pointer-events: none; filter: blur(70px); opacity: .45; animation: landing-drift 12s ease-in-out infinite; }
 .landing-orb-red { background: rgba(255,72,82,.25); }
 .landing-orb-blue { background: rgba(78,140,255,.18); animation-delay: -5s; }
-.landing-rise { animation: landing-rise .75s cubic-bezier(.2,.8,.2,1) both; }
+.landing-rise { animation: none; }
 .landing-preview { animation: landing-rise .85s .12s cubic-bezier(.2,.8,.2,1) both; }
 .landing-gradient-text { color: #6e7581; background: linear-gradient(110deg,#6e7581 12%,#8e6970 48%,#67778d 86%); background-clip: text; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 .landing-primary-button { background: #d90416; transition: transform .25s ease, box-shadow .25s ease, background-color .25s ease; }
@@ -150,6 +150,9 @@ body {
 .app-shell .builder-primary { background: #c8102e; color: #fff !important; }
 .builder-chip { background: #f0f0f2; color: #1d1d1f; }
 .builder-chip-muted { color: #515157; }
+.auth-google { background: #fff; border-color: rgba(0,0,0,.12); color: #1d1d1f; }
+.auth-google:hover { background: #f5f5f7; }
+.auth-primary { background: #c8102e; color: #fff !important; }
 
 .dark-mode body,
 .dark-mode .app-shell { background: #0b0b0d !important; color: #f5f5f7 !important; }
@@ -232,6 +235,9 @@ body {
 .dark-mode .auth-dialog .bg-white,
 .dark-mode .audit-dialog .bg-white,
 .dark-mode .account-dialog .bg-white { background-color: #242426 !important; border-color: rgba(255,255,255,.1) !important; }
+.dark-mode .auth-google { background: #2c2c2e !important; border-color: rgba(255,255,255,.16) !important; color: #f5f5f7 !important; }
+.dark-mode .auth-google:hover { background: #363638 !important; }
+.dark-mode .auth-primary { background: #ff3b45 !important; color: #111113 !important; }
 .dark-mode .audit-dialog .bg-slate-50,
 .dark-mode .account-dialog .bg-slate-50,
 .dark-mode .account-dialog .bg-slate-100 { background-color: #242426 !important; }
@@ -268,6 +274,10 @@ body {
 .dark-mode .landing-page header,
 .dark-mode .landing-page section { border-color: rgba(255,255,255,.08) !important; }
 .dark-mode .landing-page section { background-color: rgba(20,20,22,.65) !important; }
+.dark-mode .landing-page .landing-preview > div { background-color: #1c1c1e !important; border-color: rgba(255,255,255,.1) !important; }
+.dark-mode .landing-page .landing-preview .divide-black\/6,
+.dark-mode .landing-page .landing-preview [class*="border-black"] { border-color: rgba(255,255,255,.1) !important; }
+.dark-mode .landing-page .text-red-700 { color: #ff737b !important; }
 .dark-mode .landing-page .bg-white\/80,
 .dark-mode .landing-page .bg-white\/70,
 .dark-mode .landing-page .bg-white\/90 { background-color: rgba(28,28,30,.88) !important; border-color: rgba(255,255,255,.1) !important; }

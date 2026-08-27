@@ -8,12 +8,45 @@ from app.models.course import Course
 from app.models.section import Section
 from app.models.meeting_time import MeetingTime
 from app.models.professor import Professor
+from app.models.building import Building
+from app.models.building_distance import BuildingDistance
 from app.schemas.course import CourseResponse, CourseSearchResult, SectionResponse, MeetingResponse, minutes_to_time_str
 from app.services.ingest import ensure_courses_ingested
 from app.config import settings
 import re
 
 router = APIRouter()
+
+@router.get("/walking-estimate")
+async def walking_estimate(
+    origin: str = Query(..., min_length=2, max_length=10),
+    destination: str = Query(..., min_length=2, max_length=10),
+    db: AsyncSession = Depends(get_db),
+):
+    origin_code = origin.upper().strip()
+    destination_code = destination.upper().strip()
+    if not re.fullmatch(r"[A-Z0-9]{2,10}", origin_code) or not re.fullmatch(r"[A-Z0-9]{2,10}", destination_code):
+        raise HTTPException(status_code=422, detail="Invalid building code")
+    distance = (await db.execute(select(BuildingDistance).where(
+        BuildingDistance.origin == origin_code,
+        BuildingDistance.destination == destination_code,
+    ))).scalar_one_or_none()
+    buildings = (await db.execute(select(Building).where(Building.code.in_([origin_code, destination_code])))).scalars().all()
+    by_code = {building.code: building for building in buildings}
+    start = by_code.get(origin_code)
+    end = by_code.get(destination_code)
+    return {
+        "origin": origin_code,
+        "destination": destination_code,
+        "walk_minutes": distance.walk_minutes if distance else None,
+        "distance_meters": distance.distance_meters if distance else None,
+        "origin_name": start.name if start else None,
+        "origin_latitude": start.latitude if start else None,
+        "origin_longitude": start.longitude if start else None,
+        "destination_name": end.name if end else None,
+        "destination_latitude": end.latitude if end else None,
+        "destination_longitude": end.longitude if end else None,
+    }
 
 @router.get("/section-status")
 async def section_status(

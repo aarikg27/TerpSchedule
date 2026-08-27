@@ -1,7 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { RankedSchedule, Section, Meeting } from '../types/schedule';
 import { Star, MapPin, Clock, Footprints, Laptop, User, FlaskConical, Users, Presentation, X, ExternalLink, Navigation } from 'lucide-react';
 import { useModalDialog } from '../hooks/useModalDialog';
+import { getWalkingEstimate, type WalkingEstimate } from '../api/client';
 
 interface CalendarGridProps {
   schedule: RankedSchedule | null;
@@ -76,8 +78,20 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
     nextMeeting?: Meeting;
   } | null>(null);
   const [selectedSection, setSelectedSection] = useState<{ section: Section; meeting: Meeting } | null>(null);
+  const [walkLookup, setWalkLookup] = useState<{ key: string; estimate: WalkingEstimate | null } | null>(null);
   const detailsDialog = useRef<HTMLDivElement>(null);
   useModalDialog(detailsDialog, () => setSelectedSection(null), Boolean(selectedSection));
+  useEffect(() => {
+    const meeting = selectedSection?.meeting || hoveredSection?.meeting;
+    if (!meeting?.building || !meeting.next_building || meeting.walk_to_next_minutes != null) return;
+    const key = `${meeting.building}|${meeting.next_building}`;
+    if (walkLookup?.key === key) return;
+    let cancelled = false;
+    getWalkingEstimate(meeting.building, meeting.next_building)
+      .then((estimate) => { if (!cancelled) setWalkLookup({ key, estimate }); })
+      .catch(() => { if (!cancelled) setWalkLookup({ key, estimate: null }); });
+    return () => { cancelled = true; };
+  }, [hoveredSection?.meeting, selectedSection?.meeting, walkLookup?.key]);
 
   if (!schedule) {
     return (
@@ -222,7 +236,7 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
                         role="button"
                         tabIndex={0}
                         aria-label={`View ${section.course_id} section ${section.section_id} details`}
-                        className={`absolute inset-x-1 rounded-md border p-1.5 text-left transition-all cursor-pointer shadow-md overflow-hidden ${colors.bg} ${colors.border} hover:scale-[1.02] hover:z-20`}
+                        className={`absolute inset-x-1 rounded-md border p-1.5 text-left transition-[box-shadow,filter] cursor-pointer shadow-md overflow-hidden ${colors.bg} ${colors.border} hover:z-20 hover:shadow-lg hover:brightness-[.98]`}
                         style={{ top: `${topPct}%`, height: `${heightPct}%` }}
                       >
                         <div className="flex items-center justify-between gap-1">
@@ -256,8 +270,8 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
       </div>
 
       {/* Floating / Active Hover Details Card */}
-      {hoveredSection && (
-        <div className="bg-slate-900 border border-slate-700/80 rounded-xl p-3 shadow-2xl flex flex-wrap items-center justify-between gap-4 text-xs">
+      {hoveredSection && createPortal((
+        <div className="pointer-events-none fixed bottom-5 left-1/2 z-40 flex w-[min(760px,calc(100vw-2rem))] -translate-x-1/2 flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-700/80 bg-slate-900 p-3 text-xs shadow-2xl">
           <div className="flex items-center gap-3">
             <div className={`px-2.5 py-1 rounded-lg border font-mono font-bold ${getCourseColor(hoveredSection.section.course_id).bg} ${getCourseColor(hoveredSection.section.course_id).border} ${getCourseColor(hoveredSection.section.course_id).text}`}>
               {hoveredSection.section.course_id}-{hoveredSection.section.section_id}
@@ -289,26 +303,40 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
             </div>
 
             {/* Walk buffer if next meeting exists */}
-            {hoveredSection.meeting.next_building && (
+            {hoveredSection.meeting.next_building && (() => {
+              const lookupKey = hoveredSection.meeting.building && `${hoveredSection.meeting.building}|${hoveredSection.meeting.next_building}`;
+              const estimate = lookupKey && walkLookup?.key === lookupKey ? walkLookup.estimate : null;
+              const walkMinutes = hoveredSection.meeting.walk_to_next_minutes ?? estimate?.walk_minutes;
+              return (
               <div className="flex items-center gap-1 text-slate-400 font-mono">
                 <Footprints className="w-3 h-3 text-purple-400" />
                 <span>Next: {hoveredSection.meeting.next_course_id} · {hoveredSection.meeting.next_building}</span>
-                {hoveredSection.meeting.walk_to_next_minutes != null && <strong className="text-slate-700">· {hoveredSection.meeting.walk_to_next_minutes} min walk</strong>}
+                {walkMinutes != null && <strong className="text-slate-200">· {walkMinutes} min walk</strong>}
               </div>
-            )}
+              );
+            })()}
           </div>
         </div>
-      )}
+      ), document.body)}
 
       {selectedSection && (() => {
         const { section, meeting } = selectedSection;
         const colors = getCourseColor(section.course_id);
+        const lookupKey = meeting.building && meeting.next_building ? `${meeting.building}|${meeting.next_building}` : null;
+        const walkEstimate = lookupKey && walkLookup?.key === lookupKey ? walkLookup.estimate : null;
+        const walkLoading = Boolean(lookupKey && meeting.walk_to_next_minutes == null && walkLookup?.key !== lookupKey);
         const origin = meeting.building_latitude != null && meeting.building_longitude != null
           ? `${meeting.building_latitude},${meeting.building_longitude}`
-          : meeting.building_name ? `${meeting.building_name}, University of Maryland, College Park` : null;
+          : walkEstimate?.origin_latitude != null && walkEstimate.origin_longitude != null
+            ? `${walkEstimate.origin_latitude},${walkEstimate.origin_longitude}`
+            : (meeting.building_name || walkEstimate?.origin_name || meeting.building) ? `${meeting.building_name || walkEstimate?.origin_name || meeting.building}, University of Maryland, College Park` : null;
         const destination = meeting.next_building_latitude != null && meeting.next_building_longitude != null
           ? `${meeting.next_building_latitude},${meeting.next_building_longitude}`
-          : meeting.next_building_name ? `${meeting.next_building_name}, University of Maryland, College Park` : null;
+          : walkEstimate?.destination_latitude != null && walkEstimate.destination_longitude != null
+            ? `${walkEstimate.destination_latitude},${walkEstimate.destination_longitude}`
+            : (meeting.next_building_name || walkEstimate?.destination_name || meeting.next_building) ? `${meeting.next_building_name || walkEstimate?.destination_name || meeting.next_building}, University of Maryland, College Park` : null;
+        const walkMinutes = meeting.walk_to_next_minutes ?? walkEstimate?.walk_minutes;
+        const walkMeters = meeting.walk_to_next_meters ?? walkEstimate?.distance_meters;
         const mapsUrl = origin && destination
           ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=walking`
           : null;
@@ -336,9 +364,9 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({ schedule, visibleMee
                 {meeting.next_building ? (
                   <div className="rounded-2xl bg-blue-50 p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-blue-900"><Navigation className="w-4 h-4" /> Next: {meeting.next_course_id} in {meeting.next_building} {meeting.next_room || ''}</div>
-                    <div className="mt-1 text-xs text-blue-700">Starts at {meeting.next_start} · estimated {meeting.walk_to_next_minutes ?? '—'} min ({meeting.walk_to_next_meters ? `${meeting.walk_to_next_meters} m` : 'distance unavailable'})</div>
+                    <div className="mt-1 text-xs text-blue-700">Starts at {meeting.next_start}{walkMinutes != null ? ` · about ${walkMinutes} min${walkMeters != null ? ` (${walkMeters} m)` : ''}` : walkLoading ? ' · calculating walk estimate…' : ''}</div>
                     {mapsUrl && <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 hover:text-blue-500">Open walking directions in Google Maps <ExternalLink className="w-3 h-3" /></a>}
-                    <div className="mt-2 text-[10px] leading-relaxed text-blue-600/70">Campus estimate only. Google Maps provides current pedestrian routing.</div>
+                    <div className="mt-2 text-[10px] leading-relaxed text-blue-600/70">Estimated campus walk. Open Maps for current directions.</div>
                   </div>
                 ) : <div className="rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">No class follows this meeting on the same day.</div>}
               </div>

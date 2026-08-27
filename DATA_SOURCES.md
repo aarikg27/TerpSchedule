@@ -43,4 +43,4 @@ Courses and sections are keyed by Testudo term, so data from different semesters
 
 ## Independence
 
-TerpSchedule is an independent student project. It is not affiliated with or endorsed by the University of Maryland, Testudo, or PlanetTerp.
+TerpSchedule is an independent planning tool. It is not affiliated with or endorsed by the University of Maryland, Testudo, or PlanetTerp.

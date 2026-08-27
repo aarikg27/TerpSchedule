@@ -12,7 +12,7 @@ export const ScheduleSummary: React.FC<{ schedule: RankedSchedule }> = ({ schedu
       <div className="rounded-xl bg-slate-950/40 p-3"><GraduationCap className="mb-2 h-4 w-4 text-blue-400"/><strong className="block text-lg text-slate-100">{metrics.avg_gpa == null ? 'No data' : metrics.avg_gpa.toFixed(2)}</strong><span className="text-[10px] text-slate-500">average GPA · {metrics.gpa_sections_with_data}/{metrics.gpa_sections_total} with data</span></div>
       <div className="rounded-xl bg-slate-950/40 p-3"><Star className="mb-2 h-4 w-4 text-amber-400"/><strong className="block text-lg text-slate-100">{rated ? `${metrics.avg_professor_rating.toFixed(1)} / 5` : 'No data'}</strong><span className="text-[10px] text-slate-500">professor rating · {rated}/{schedule.sections.length} rated</span></div>
       <div className="rounded-xl bg-slate-950/40 p-3"><Users className="mb-2 h-4 w-4 text-emerald-400"/><strong className="block text-lg text-slate-100">{metrics.open_sections}/{schedule.sections.length}</strong><span className="text-[10px] text-slate-500">sections open now</span></div>
-      {schedule.customized && <div className="col-span-2 text-[10px] text-slate-500 sm:col-span-4">Custom schedule · ranking score removed because its sections were edited.</div>}
+      {schedule.customized && <div className="col-span-2 text-[10px] font-medium text-slate-500 sm:col-span-4">Edited schedule</div>}
     </section>
   );
 };

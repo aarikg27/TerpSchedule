@@ -82,3 +82,14 @@ export async function deleteWorkspaceData(userId: string): Promise<void> {
   const failure = results.find((result) => result.error)?.error;
   if (failure) throw new Error(failure.message);
 }
+
+export async function deleteOwnAccount(): Promise<void> {
+  if (!neonClient) throw new Error('Account deletion is unavailable right now.');
+  const { error } = await neonClient.rpc('delete_own_terpschedule_account');
+  if (error) {
+    if (error.code === 'PGRST202' || error.message.toLowerCase().includes('schema cache')) {
+      throw new Error('Account deletion is being updated. Nothing was deleted. Please try again shortly.');
+    }
+    throw new Error('Your account could not be deleted. Nothing was changed. Please try again.');
+  }
+}

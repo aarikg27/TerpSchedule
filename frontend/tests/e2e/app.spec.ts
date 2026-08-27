@@ -13,6 +13,7 @@ test.beforeEach(async ({ page }) => {
   await page.route('**/api/v1/optimize', route => route.fulfill({ json: { total_combinations_checked: 1, valid_schedules_count: 1, execution_time_ms: 1, schedules: [schedule], registerable_schedules_count: 1, waitlist_schedules_count: 0, open_schedules: [schedule], waitlist_schedules: [] } }));
   await page.route('**/api/v1/courses**', route => {
     const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/walking-estimate')) return route.fulfill({ json: { origin: 'IRB', destination: 'MTH', origin_name: 'Iribe Center', destination_name: 'Mathematics Building', origin_latitude: 38.9891, origin_longitude: -76.9365, destination_latitude: 38.9882, destination_longitude: -76.9397, walk_minutes: 7, distance_meters: 510, source: 'umd_gis_estimate' } });
     if (url.pathname.endsWith('/MATH240')) return route.fulfill({ json: { course_id: 'MATH240', department: 'MATH', name: 'Linear Algebra', credits: 4, sections: [{ course_id: 'MATH240', section_id: '0201', instructor: 'Linear Professor', avg_rating: 4.7, avg_gpa: 3.55, seats_total: 30, open_seats: 8, waitlist_count: 0, meetings: [{ day: 'M', start_time: '10:00', end_time: '10:50', building: 'MTH', room: '1407', class_type: 'Lecture' }] }, { course_id: 'MATH240', section_id: '0202', instructor: 'Conflict Professor', avg_rating: 4.1, avg_gpa: 3.2, seats_total: 30, open_seats: 3, waitlist_count: 0, meetings: [{ day: 'M', start_time: '09:30', end_time: '10:20', building: 'MTH', room: '0101', class_type: 'Lecture' }] }] } });
     return route.fulfill({ json: [{ course_id: 'MATH240', department: 'MATH', name: 'Linear Algebra', credits: 4 }] });
   });
@@ -65,7 +66,9 @@ test('opens the optional account flow', async ({ page }) => {
   const dialog = page.getByRole('dialog', { name: /create a terpschedule account/i });
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveCSS('background-color', 'rgb(28, 28, 30)');
-  await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible();
+  const googleButton = page.getByRole('button', { name: /continue with google/i });
+  await expect(googleButton).toBeVisible();
+  await expect(googleButton).toHaveCSS('color', 'rgb(245, 245, 247)');
   await expect(page.getByLabel('Email')).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
@@ -77,7 +80,7 @@ test('makes privacy and terms available before entering the planner', async ({ p
   await expect(page.getByRole('dialog', { name: /privacy policy/i })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL(/\/$/);
-  await page.getByRole('button', { name: /terms & disclaimer/i }).click();
+  await page.getByRole('button', { name: 'Terms', exact: true }).click();
   await expect(page).toHaveURL(/\/terms$/);
   await expect(page.getByRole('dialog', { name: /terms and disclaimer/i })).toBeVisible();
 });
@@ -127,12 +130,42 @@ test('keeps the active ranking card inside its scroll area and omits diagnostics
 });
 
 test('shows the landing page first and opens the planner', async ({ page }) => {
-  await expect(page.getByRole('heading', { name: /your semester/i })).toBeVisible();
+  await expect(page).toHaveTitle('TerpSchedule');
+  await expect(page.getByRole('heading', { name: /build a week/i })).toBeVisible();
   await page.getByRole('button', { name: /build my schedule/i }).click();
   await expect(page).toHaveURL(/\/planner$/);
   const inputsTab = page.getByRole('button', { name: 'Inputs' });
   if (await inputsTab.isVisible()) await inputsTab.click();
   await expect(page.getByText('Target Courses')).toBeVisible();
+});
+
+test('hydrates walking details for a restored schedule without changing page height on hover', async ({ page }) => {
+  const savedSchedule = {
+    ...schedule,
+    sections: [
+      { ...schedule.sections[0], meetings: [{ ...schedule.sections[0].meetings[0], next_course_id: 'MATH240', next_building: 'MTH', next_room: '1407', next_start: '10:00' }] },
+      { course_id: 'MATH240', section_id: '0201', instructor: 'Linear Professor', rating: 4.7, gpa: 3.55, gpa_available: true, credits: 4, seats_total: 30, open_seats: 8, waitlist_count: 0, availability: 'open', meetings: [{ day: 'M', start: '10:00', end: '10:50', building: 'MTH', room: '1407', class_type: 'Lecture' }] },
+    ],
+  };
+  await page.evaluate((item) => localStorage.setItem('terpschedule-saved-schedules-v2:guest', JSON.stringify([{ id: 'walk-test', name: 'Walking test', schedule: item, createdAt: new Date().toISOString() }])), savedSchedule);
+  await page.reload();
+  await page.getByRole('button', { name: /build my schedule/i }).click();
+  const rankings = page.getByRole('button', { name: 'Rankings' });
+  if (await rankings.isVisible()) await rankings.click();
+  await page.getByText('Walking test').click();
+  const calendar = page.getByRole('button', { name: 'Calendar', exact: true });
+  if (await calendar.isVisible()) await calendar.click();
+  const classCard = page.getByRole('button', { name: /view cmsc132 section/i }).first();
+  await page.waitForTimeout(600);
+  const heightBefore = await page.evaluate(() => document.documentElement.scrollHeight);
+  await classCard.hover();
+  await expect(page.getByText(/7 min walk/i)).toBeVisible();
+  await page.waitForTimeout(200);
+  const heightAfter = await page.evaluate(() => document.documentElement.scrollHeight);
+  expect(heightAfter).toBe(heightBefore);
+  await classCard.click();
+  await expect(page.getByRole('dialog', { name: /cmsc132 section details/i })).toContainText('about 7 min');
+  await expect(page.getByRole('link', { name: /walking directions/i })).toHaveAttribute('href', /travelmode=walking/);
 });
 
 test('saves, renames, restores, and closes a schedule', async ({ page }) => {

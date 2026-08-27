@@ -96,6 +96,40 @@ async def init_db() -> None:
                 """CREATE POLICY user_audit_summaries_owner ON user_audit_summaries
                     FOR ALL USING (auth.user_id()::text = user_id)
                     WITH CHECK (auth.user_id()::text = user_id)""",
+                """CREATE OR REPLACE FUNCTION public.delete_own_terpschedule_account()
+                    RETURNS boolean
+                    LANGUAGE plpgsql
+                    SECURITY DEFINER
+                    SET search_path = pg_catalog, pg_temp
+                    AS $$
+                    DECLARE
+                      requester text := auth.user_id()::text;
+                      deleted_auth_rows integer := 0;
+                    BEGIN
+                      IF requester IS NULL OR requester = '' THEN
+                        RAISE EXCEPTION 'Authentication required';
+                      END IF;
+
+                      DELETE FROM public.user_saved_schedules WHERE user_id = requester;
+                      DELETE FROM public.user_planner_states WHERE user_id = requester;
+                      DELETE FROM public.user_audit_summaries WHERE user_id = requester;
+
+                      IF to_regclass('neon_auth."user"') IS NOT NULL THEN
+                        EXECUTE 'DELETE FROM neon_auth."user" WHERE id::text = $1' USING requester;
+                      ELSIF to_regclass('neon_auth.users') IS NOT NULL THEN
+                        EXECUTE 'DELETE FROM neon_auth.users WHERE id::text = $1' USING requester;
+                      ELSE
+                        RAISE EXCEPTION 'Authentication account table unavailable';
+                      END IF;
+                      GET DIAGNOSTICS deleted_auth_rows = ROW_COUNT;
+                      IF deleted_auth_rows <> 1 THEN
+                        RAISE EXCEPTION 'Authentication account was not removed';
+                      END IF;
+                      RETURN true;
+                    END;
+                    $$""",
+                "REVOKE ALL ON FUNCTION public.delete_own_terpschedule_account() FROM PUBLIC",
+                "GRANT EXECUTE ON FUNCTION public.delete_own_terpschedule_account() TO authenticated",
             ):
                 await conn.execute(text(statement))
         # Lightweight compatibility migration for existing local databases.
